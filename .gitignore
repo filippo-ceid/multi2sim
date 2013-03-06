@@ -1,0 +1,8 @@
+*.a
+*.o
+*~
+Makefile
+config.log
+config.status
+m2s
+.deps
