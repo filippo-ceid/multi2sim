@@ -80,6 +80,7 @@ static char *x86_opengl_debug_file_name = "";
 static char *x86_save_checkpoint_file_name = "";
 static char *x86_sys_debug_file_name = "";
 static char *x86_trace_cache_debug_file_name = "";
+static char *x86_multiload_checkpoint_file_name[64] = {NULL}; //MY CODE
 
 static char *evg_disasm_file_name = "";
 static char *evg_isa_debug_file_name = "";
@@ -225,6 +226,9 @@ static char *m2s_help =
 	"      Load a checkpoint of the x86 architectural state, created in a previous\n"
 	"      execution of the simulator with option '--x86-save-checkpoint'.\n"
 	"\n"
+        "  --x86-multiload-checkpoint <number of files> <file list>\n"
+        "      Load multiple checkpoints created previously."
+        "\n"
 	"  --x86-max-cycles <cycles>\n"
 	"      Maximum number of cycles for x86 timing simulation. Use 0 (default) for no\n"
 	"      limit. This option is only valid for detailed x86 simulation (option\n"
@@ -674,6 +678,25 @@ static void m2s_read_command_line(int *argc_ptr, char **argv)
 			m2s_need_argument(argc, argv, argi);
 			x86_load_checkpoint_file_name = argv[++argi];
 			continue;
+		}
+
+                //MY CODE
+                /* CPU load multiple checkpoints file name */
+		if (!strcmp(argv[argi], "--x86-multiload-checkpoint"))
+		{
+                   int ckp_cnt=0,i;
+                   m2s_need_argument(argc, argv, argi);
+                   ckp_cnt = atoi(argv[++argi]);
+
+                   if (ckp_cnt<=0)
+                      fatal("wrong checkpoint number: %d\n",ckp_cnt);
+
+                   for (i=0; i<ckp_cnt; i++)
+                   {
+                      m2s_need_argument(argc, argv, argi);
+                      x86_multiload_checkpoint_file_name[i] = argv[++argi];
+                   }
+                   continue;
 		}
 
 		/* Maximum number of cycles */
@@ -1638,6 +1661,19 @@ int main(int argc, char **argv)
 	/* Load architectural state checkpoint */
 	if (x86_load_checkpoint_file_name[0])
 		x86_checkpoint_load(x86_load_checkpoint_file_name);
+
+        //MY CODE
+        /* Load multiple checkpoints */
+	if (x86_multiload_checkpoint_file_name[0])
+        {
+           int i=0;
+           while (x86_multiload_checkpoint_file_name[i])
+           {
+              printf("%d checkpoint file: %s\n",i,x86_multiload_checkpoint_file_name[i]);
+              x86_checkpoint_load(x86_multiload_checkpoint_file_name[i]);
+              i++;
+           }
+        }
 
 	/* Load programs */
 	m2s_load_programs(argc, argv);
