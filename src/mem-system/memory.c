@@ -24,7 +24,7 @@
 #include <lib/util/debug.h>
 
 #include "memory.h"
-
+#include "dramsim2_wrapper.h"
 
 /* Total space allocated for memory pages */
 unsigned long mem_mapped_space = 0;
@@ -335,7 +335,16 @@ void mem_write(struct mem_t *mem, unsigned int addr, int size, void *buf)
 {
 	mem_access(mem, addr, size, buf, mem_access_write);
 }
-
+// MY CODE: dummy test
+void read_complete(unsigned id, unsigned long long address, unsigned long long clock_cycle)
+{
+        
+}
+// MY CODE: dummy test
+void write_complete(unsigned id, unsigned long long address, unsigned long long clock_cycle)
+{
+       
+}
 
 /* Creation and destruction */
 struct mem_t *mem_create()
@@ -345,6 +354,8 @@ struct mem_t *mem_create()
 	/* Initialize */
 	mem = xcalloc(1, sizeof(struct mem_t));
 	mem->safe = mem_safe_mode;
+
+        dramsim2_init((void*)read_complete, (void*)write_complete);// MY CODE: dummy test
 
 	/* Return */
 	return mem;

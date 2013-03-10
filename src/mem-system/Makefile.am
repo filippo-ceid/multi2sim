@@ -42,7 +42,10 @@ libmemsystem_a_SOURCES = \
 	prefetch-history.h \
 	\
 	prefetcher.c \
-	prefetcher.h
+	prefetcher.h \
+	\
+	dramsim2_wrapper.cpp \
+	dramsim2_wrapper.h
 
 INCLUDES = @M2S_INCLUDES@
 
