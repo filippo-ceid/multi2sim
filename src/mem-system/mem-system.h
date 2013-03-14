@@ -20,6 +20,8 @@
 #ifndef MEM_SYSTEM_H
 #define MEM_SYSTEM_H
 
+#include "mod-stack.h"
+
 extern char *mem_report_file_name;
 
 #define mem_debugging() debug_status(mem_debug_category)
@@ -51,6 +53,11 @@ void mem_system_dump_report(void);
 struct mod_t *mem_system_get_mod(char *mod_name);
 struct net_t *mem_system_get_net(char *net_name);
 
+// MY CODE
+void dram_read_callback(unsigned id, unsigned long long address, unsigned long long clock_cycle);
+void dram_write_callback(unsigned id, unsigned long long address, unsigned long long clock_cycle);
 
+void dram_add_request(struct mod_t * mod, struct mod_stack_t *stack, unsigned char iswrite);
+void dram_update(void);
 #endif
 

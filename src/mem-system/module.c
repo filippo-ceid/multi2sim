@@ -125,7 +125,8 @@ long long mod_access(struct mod_t *mod, enum mod_access_kind_t access_kind,
 	stack->client_info = client_info;
 
 	/* Select initial CPU/GPU event */
-	if (mod->kind == mod_kind_cache || mod->kind == mod_kind_main_memory)
+	if (mod->kind == mod_kind_cache || mod->kind == mod_kind_main_memory
+            || mod->kind==mod_kind_dram_main_memory) // MY CODE
 	{
 		if (access_kind == mod_access_load)
 		{
@@ -510,7 +511,8 @@ struct mod_t *mod_get_low_mod(struct mod_t *mod, unsigned int addr)
 
 	/* Main memory does not have a low module */
 	assert(mod_serves_address(mod, addr));
-	if (mod->kind == mod_kind_main_memory)
+	if (mod->kind == mod_kind_main_memory 
+            || mod->kind == mod_kind_dram_main_memory) // MY CODE
 	{
 		assert(!linked_list_count(mod->low_mod_list));
 		return NULL;
@@ -700,4 +702,75 @@ struct mod_client_info_t *mod_client_info_create(struct mod_t *mod)
 void mod_client_info_free(struct mod_t *mod, struct mod_client_info_t *client_info)
 {
 	repos_free_object(mod->client_info_repos, client_info);
+}
+
+
+// MY CODE
+void mod_dram_req_insert(struct mod_t *mod, struct mod_stack_t *stack, unsigned char iswrite)
+{
+   struct dram_req_list_t * new_node;
+
+   if (mod->kind != mod_kind_dram_main_memory) 
+   {
+      return;
+   }
+
+   new_node = (struct dram_req_list_t *) xcalloc(1, sizeof(struct dram_req_list_t));
+   new_node->stack = stack;
+   new_node->address = stack->addr;
+   new_node->iswrite = iswrite;
+   new_node->next = NULL;
+   new_node->prev = mod->dram_pending_request_tail;
+   mod->dram_pending_request_tail = new_node;
+
+   if (mod->dram_pending_request_head == NULL) 
+   {
+      mod->dram_pending_request_head = new_node;
+   }
+}
+struct mod_stack_t * mod_dram_req_remove(struct mod_t *mod, unsigned int address, unsigned char iswrite)
+{
+   struct dram_req_list_t * ptr;
+   struct mod_stack_t * ret;
+
+   if (mod->dram_pending_request_head == NULL) 
+   {
+      return NULL;
+   }
+
+   ptr = mod->dram_pending_request_head;
+
+   while (ptr) 
+   {
+      if ((ptr->address == address)&&(ptr->iswrite == iswrite))
+      {
+         ret = ptr->stack;
+         ptr->prev->next = ptr->next;
+         ptr->next->prev = ptr->prev;
+         free(ptr);
+
+         return ret;
+      }
+      ptr = ptr->next;
+   }
+
+
+   return NULL;
+}
+
+struct mod_t * mod_get_dram_mod(void)
+{
+   struct mod_t *mod;
+   int i;
+
+   for (i = 0; i < list_count(mem_system->mod_list); i++)
+   {
+      mod = list_get(mem_system->mod_list, i);
+      if (mod->kind == mod_kind_dram_main_memory) 
+      {
+         return mod;
+      }
+   }
+
+   return NULL;
 }

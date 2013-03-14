@@ -1216,7 +1216,8 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 
 		/* If this is a main memory, the block is here. A previous miss was just a miss
 		 * in the directory. */
-		if (mod->kind == mod_kind_main_memory && !stack->state)
+		if ( (mod->kind == mod_kind_main_memory || mod->kind == mod_kind_dram_main_memory) 
+                    && !stack->state) // MY CODE
 		{
 			stack->state = cache_block_exclusive;
 			cache_set_block(mod->cache, stack->set, stack->way,
@@ -1291,7 +1292,7 @@ void mod_handler_nmoesi_evict(int event, void *data)
 
 		/* If module is main memory, we just need to set the block as invalid, 
 		 * and finish. */
-		if (mod->kind == mod_kind_main_memory)
+		if (mod->kind == mod_kind_main_memory || mod->kind == mod_kind_dram_main_memory)
 		{
 			cache_set_block(mod->cache, stack->src_set, stack->src_way,
 				0, cache_block_invalid);
@@ -1902,6 +1903,14 @@ void mod_handler_nmoesi_read_request(int event, void *data)
 
 		dir_entry_unlock(dir, stack->set, stack->way);
 
+                // MY CODE
+                if (stack->target_mod->kind == mod_kind_dram_main_memory) 
+                {
+                   dram_add_request(stack->target_mod, stack, 0);
+                   return;
+                }
+
+
 		int latency = stack->reply == reply_ack_data_sent_to_peer ? 0 : target_mod->latency;
 		esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_REPLY, stack, latency);
 		return;
@@ -2454,6 +2463,14 @@ void mod_handler_nmoesi_write_request(int event, void *data)
 
 		/* Unlock, reply_size is the data of the size of the requester's block. */
 		dir_entry_unlock(target_mod->dir, stack->set, stack->way);
+
+                // MY CODE
+                if (stack->target_mod->kind == mod_kind_dram_main_memory) 
+                {
+                   dram_add_request(stack->target_mod, stack, 1);
+                   return;
+                }
+
 
 		int latency = stack->reply == reply_ack_data_sent_to_peer ? 0 : target_mod->latency;
 		esim_schedule_event(EV_MOD_NMOESI_WRITE_REQUEST_REPLY, stack, latency);

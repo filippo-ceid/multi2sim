@@ -57,7 +57,8 @@ enum mod_kind_t
 	mod_kind_invalid = 0,
 	mod_kind_cache,
 	mod_kind_main_memory,
-	mod_kind_local_memory
+	mod_kind_local_memory,
+        mod_kind_dram_main_memory // MY CODE
 };
 
 /* Any info that clients (cpu/gpu) can pass
@@ -79,6 +80,17 @@ enum mod_range_kind_t
 };
 
 #define MOD_ACCESS_HASH_TABLE_SIZE  17
+
+// MY CODE
+struct dram_req_list_t
+{
+   struct mod_stack_t * stack;
+   unsigned int address;
+   unsigned char iswrite; 
+
+   struct dram_req_list_t * prev;
+   struct dram_req_list_t * next;
+};
 
 /* Memory module */
 struct mod_t
@@ -140,6 +152,12 @@ struct mod_t
 
 	/* Cache structure */
 	struct cache_t *cache;
+
+	// MY CODE
+	/* DRAM */
+	void * DRAM;
+	struct dram_req_list_t * dram_pending_request_head;
+	struct dram_req_list_t * dram_pending_request_tail;
 
 	/* Low and high memory modules */
 	struct linked_list_t *high_mod_list;
@@ -232,6 +250,12 @@ struct mod_t
 	long long no_retry_nc_writes;
 	long long no_retry_nc_write_hits;
 };
+
+// MY CODE
+void mod_dram_req_insert(struct mod_t *mod, struct mod_stack_t *stack, unsigned char iswrite);
+struct mod_stack_t * mod_dram_req_remove(struct mod_t *mod, unsigned int address, unsigned char iswrite);
+struct mod_t * mod_get_dram_mod(void);
+
 
 struct mod_t *mod_create(char *name, enum mod_kind_t kind, int num_ports,
 	int block_size, int latency);

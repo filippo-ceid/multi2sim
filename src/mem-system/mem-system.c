@@ -34,6 +34,8 @@
 #include "module.h"
 #include "nmoesi-protocol.h"
 
+// MY CODE
+#include "dramsim2_wrapper.h"
 
 /*
  * Global Variables
@@ -350,3 +352,50 @@ struct net_t *mem_system_get_net(char *net_name)
 	return NULL;
 }
 
+// MY CODE
+void dram_read_callback(unsigned id, unsigned long long address, unsigned long long clock_cycle)
+{
+   struct mod_stack_t * stack;
+   struct mod_t * dram_mod;
+
+   dram_mod = mod_get_dram_mod();
+   stack = mod_dram_req_remove(dram_mod,address,0);
+
+   // Add reply event
+   esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_REPLY, stack, 0);
+   return;
+}
+
+void dram_write_callback(unsigned id, unsigned long long address, unsigned long long clock_cycle)
+{
+   struct mod_stack_t * stack;
+   struct mod_t * dram_mod;
+
+   dram_mod = mod_get_dram_mod();
+   stack = mod_dram_req_remove(dram_mod,address,1);
+
+   // Add reply event
+
+   return;
+}
+
+void dram_add_request(struct mod_t * dram_mod, struct mod_stack_t *stack, unsigned char iswrite)
+{
+   mod_dram_req_insert(dram_mod,stack,iswrite);
+   memory_addtransaction(dram_mod->DRAM, iswrite, stack->addr);
+}
+
+void dram_update(void)
+{
+   struct mod_t * dram_mod;
+
+   dram_mod = mod_get_dram_mod();
+
+   if (dram_mod == NULL || dram_mod->DRAM == NULL) 
+   {
+      return;
+   }
+   memory_update(dram_mod->DRAM);
+
+   return;
+}

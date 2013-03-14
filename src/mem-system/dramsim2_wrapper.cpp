@@ -18,7 +18,8 @@ public:
 	void (*readFunc)(unsigned, unsigned long long, unsigned long long);
 	void (*writeFunc)(unsigned, unsigned long long, unsigned long long);
 
-	void init(void* rFunc, void* wFunc);
+	void init(void* rFunc, void* wFunc, int size,
+                  char * dram_ini_name, char * system_ini_name, char * ini_dir);
 	void read_complete(unsigned, uint64_t, uint64_t);
 	void write_complete(unsigned, uint64_t, uint64_t);
 };
@@ -44,7 +45,8 @@ void power_callback(double a, double b, double c, double d)
 }
 
 
-void some_object::init(void* rFunc, void* wFunc)
+void some_object::init(void* rFunc, void* wFunc, int size,
+                       char * dram_ini_name, char * system_ini_name, char * ini_dir)
 {
 	readFunc = (void (*)(unsigned, unsigned long long, unsigned long long))rFunc;
 	writeFunc = (void (*)(unsigned, unsigned long long, unsigned long long))wFunc;
@@ -52,7 +54,7 @@ void some_object::init(void* rFunc, void* wFunc)
 	TransactionCompleteCB *read_cb = new Callback<some_object, void, unsigned, uint64_t, uint64_t>(this, &some_object::read_complete);
         TransactionCompleteCB *write_cb = new Callback<some_object, void, unsigned, uint64_t, uint64_t>(this, &some_object::write_complete);
 
-        MultiChannelMemorySystem *mem = getMemorySystemInstance("ini/DDR2_micron_16M_8b_x8_sg3E.ini", "ini/system.ini", "/home/ray/WORK/multi2sim", "example_app", 16384);
+        MultiChannelMemorySystem *mem = getMemorySystemInstance(dram_ini_name, system_ini_name, ini_dir, "example_app", size);
 
 
         mem->RegisterCallbacks(read_cb, write_cb, power_callback);
@@ -63,10 +65,11 @@ void some_object::init(void* rFunc, void* wFunc)
 extern "C"
 {
 
-void* dramsim2_init(void *rFunc, void* wFunc)
+void* dramsim2_init(void *rFunc, void* wFunc, int size,
+                    char * dram_ini_name, char * system_ini_name, char * ini_dir)
 {
 	some_object * obj = (some_object*)malloc(sizeof(some_object));
-	obj->init(rFunc,wFunc);
+	obj->init(rFunc,wFunc, size, dram_ini_name, system_ini_name, ini_dir);
 
 	return (void*) obj;
 }
@@ -77,7 +80,7 @@ void memory_update(void* in_obj)
 	obj->memory->update();
 }
 
-void memory_addtransaction(void* in_obj, char isWrite, unsigned long long addr)
+void memory_addtransaction(void* in_obj, unsigned char isWrite, unsigned long long addr)
 {
 	some_object * obj = (some_object*)in_obj;
 
@@ -85,6 +88,13 @@ void memory_addtransaction(void* in_obj, char isWrite, unsigned long long addr)
 		obj->memory->addTransaction(true, addr);
 	else
 		obj->memory->addTransaction(false, addr);
+}
+void memory_setCPUClockSpeed(void* in_obj, unsigned long long cpuClkFreqHz)
+{
+      some_object * obj = (some_object*)in_obj;
+      obj->memory->setCPUClockSpeed(cpuClkFreqHz);
+
+      return;
 }
 
 }

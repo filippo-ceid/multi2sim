@@ -41,6 +41,9 @@
 #include "module.h"
 #include "prefetcher.h"
 
+// MY CODE
+#include "dramsim2_wrapper.h"
+
 /*
  * Global Variables
  */
@@ -668,6 +671,97 @@ static struct mod_t *mem_config_read_main_memory(struct config_t *config, char *
 	return mod;
 }
 
+// MY CODE
+static struct mod_t *mem_config_read_dram(struct config_t *config, char *section)
+{
+	char mod_name[MAX_STRING_SIZE];
+
+	int block_size;
+	int latency;
+	int num_ports;
+	int dir_size;
+	int dir_assoc;
+
+	char *net_name;
+	char *net_node_name;
+
+	struct mod_t *mod;
+	struct net_t *net;
+	struct net_node_t *net_node;
+
+        char * ini_dir;
+        char * dram_ini_name;
+        char * system_ini_name;
+        int dram_size;
+        unsigned long long CPUClkFreq;
+
+        ini_dir = config_read_string(config,section,"INIDir","/home/ray/WORK/multi2sim/ini");
+        dram_ini_name = config_read_string(config,section,"DRAMINI","DDR2_micron_16M_8b_x8_sg3E.ini");
+        system_ini_name = config_read_string(config,section,"DRAMINI","system.ini");
+        dram_size = config_read_int(config, section, "DRAMSize", 16384);
+        CPUClkFreq = config_read_llint(config,section,"CPUClock", 1000000000);
+
+        // Keep the rest to make other funtions happy 
+        // ==========================================
+	/* Read parameters */
+	str_token(mod_name, sizeof mod_name, section, 1, " ");
+	block_size = config_read_int(config, section, "BlockSize", 64);
+	latency = config_read_int(config, section, "Latency", 1);
+	num_ports = config_read_int(config, section, "Ports", 2);
+	dir_size = config_read_int(config, section, "DirectorySize", 1024);
+	dir_assoc = config_read_int(config, section, "DirectoryAssoc", 8);
+
+	/* Check parameters */
+	if (block_size < 1 || (block_size & (block_size - 1)))
+		fatal("%s: %s: block size must be power of two.\n%s",
+			mem_config_file_name, mod_name, err_mem_config_note);
+	if (latency < 1)
+		fatal("%s: %s: invalid value for variable 'Latency'.\n%s",
+			mem_config_file_name, mod_name, err_mem_config_note);
+	if (num_ports < 1)
+		fatal("%s: %s: invalid value for variable 'NumPorts'.\n%s",
+			mem_config_file_name, mod_name, err_mem_config_note);
+	if (dir_size < 1 || (dir_size & (dir_size - 1)))
+		fatal("%s: %s: directory size must be a power of two.\n%s",
+			mem_config_file_name, mod_name, err_mem_config_note);
+	if (dir_assoc < 1 || (dir_assoc & (dir_assoc - 1)))
+		fatal("%s: %s: directory associativity must be a power of two.\n%s",
+			mem_config_file_name, mod_name, err_mem_config_note);
+	if (dir_assoc > dir_size)
+		fatal("%s: %s: invalid directory associativity.\n%s",
+			mem_config_file_name, mod_name, err_mem_config_note);
+
+	/* Create module */
+	mod = mod_create(mod_name, mod_kind_dram_main_memory, num_ports,
+			block_size, latency); // MY CODE
+
+	/* Store directory size */
+	mod->dir_size = dir_size;
+	mod->dir_assoc = dir_assoc;
+	mod->dir_num_sets = dir_size / dir_assoc;
+
+	/* High network */
+	net_name = config_read_string(config, section, "HighNetwork", "");
+	net_node_name = config_read_string(config, section, "HighNetworkNode", "");
+	mem_config_insert_module_in_network(config, mod, net_name, net_node_name,
+			&net, &net_node);
+	mod->high_net = net;
+	mod->high_net_node = net_node;
+
+	/* Create cache and directory */
+	mod->cache = cache_create(mod->name, dir_size / dir_assoc, block_size,
+			dir_assoc, cache_policy_lru);
+        // ==========================================
+
+        mod->DRAM = dramsim2_init( (void*)dram_read_callback, (void*)dram_write_callback, dram_size, 
+                                  dram_ini_name, system_ini_name, ini_dir);
+        mod->dram_pending_request_head = NULL;
+        mod->dram_pending_request_tail = NULL;
+        memory_setCPUClockSpeed(mod->DRAM, CPUClkFreq);
+
+	/* Return */
+	return mod;
+}
 
 static void mem_config_read_module_address_range(struct config_t *config,
 	struct mod_t *mod, char *section)
@@ -823,6 +917,8 @@ static void mem_config_read_modules(struct config_t *config)
 			mod = mem_config_read_cache(config, section);
 		else if (!strcasecmp(mod_type, "MainMemory"))
 			mod = mem_config_read_main_memory(config, section);
+                else if (!strcasecmp(mod_type, "DRAM")) // MY CODE
+			mod = mem_config_read_dram(config, section);
 		else
 			fatal("%s: %s: invalid or missing value for 'Type'.\n%s",
 				mem_config_file_name, mod_name,
