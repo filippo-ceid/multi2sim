@@ -54,7 +54,7 @@ void some_object::init(void* rFunc, void* wFunc, int size,
 	TransactionCompleteCB *read_cb = new Callback<some_object, void, unsigned, uint64_t, uint64_t>(this, &some_object::read_complete);
         TransactionCompleteCB *write_cb = new Callback<some_object, void, unsigned, uint64_t, uint64_t>(this, &some_object::write_complete);
 
-        MultiChannelMemorySystem *mem = getMemorySystemInstance(dram_ini_name, system_ini_name, ini_dir, "example_app", size);
+        MultiChannelMemorySystem *mem = getMemorySystemInstance(dram_ini_name, system_ini_name, ini_dir, "dram_result", size);
 
 
         mem->RegisterCallbacks(read_cb, write_cb, power_callback);

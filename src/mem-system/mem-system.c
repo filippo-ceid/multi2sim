@@ -358,11 +358,19 @@ void dram_read_callback(unsigned id, unsigned long long address, unsigned long l
    struct mod_stack_t * stack;
    struct mod_t * dram_mod;
 
-   dram_mod = mod_get_dram_mod();
-   stack = mod_dram_req_remove(dram_mod,address,0);
+   //printf("dram read callback: addr=0x%x\n",address);
+   //fflush(stdout);
 
+   dram_mod = mod_get_dram_mod();
+   //printf("dram read callback: dram_mod=0x%x\n",dram_mod);
+   //fflush(stdout);
+   stack = mod_dram_req_remove(dram_mod,address,0);
+   //printf("dram read callback: stack=0x%x\n",stack);
+   //fflush(stdout);
    // Add reply event
    esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_REPLY, stack, 0);
+   //printf("dram read callback finish\n");
+   //fflush(stdout);
    return;
 }
 
@@ -371,18 +379,28 @@ void dram_write_callback(unsigned id, unsigned long long address, unsigned long 
    struct mod_stack_t * stack;
    struct mod_t * dram_mod;
 
+   //printf("dram write callback\n");
+   //fflush(stdout);
+
    dram_mod = mod_get_dram_mod();
+   
    stack = mod_dram_req_remove(dram_mod,address,1);
 
    // Add reply event
-
+   esim_schedule_event(EV_MOD_NMOESI_WRITE_REQUEST_REPLY, stack, 0);
+   //printf("dram write callback finish\n");
+   //fflush(stdout);
    return;
 }
 
 void dram_add_request(struct mod_t * dram_mod, struct mod_stack_t *stack, unsigned char iswrite)
 {
+   //printf("  %lld %lld 0x%x %s dram add request \n", esim_cycle, stack->id,stack->tag, dram_mod->name);
+   //fflush(stdout);
    mod_dram_req_insert(dram_mod,stack,iswrite);
    memory_addtransaction(dram_mod->DRAM, iswrite, stack->addr);
+   //printf("dram add request finish. dram_mod=0x%x stack=0x%x, addr=0x%x\n",dram_mod, stack,stack->addr);
+   //fflush(stdout);
 }
 
 void dram_update(void)

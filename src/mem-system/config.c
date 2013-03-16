@@ -697,7 +697,7 @@ static struct mod_t *mem_config_read_dram(struct config_t *config, char *section
 
         ini_dir = config_read_string(config,section,"INIDir","/home/ray/WORK/multi2sim/ini");
         dram_ini_name = config_read_string(config,section,"DRAMINI","DDR2_micron_16M_8b_x8_sg3E.ini");
-        system_ini_name = config_read_string(config,section,"DRAMINI","system.ini");
+        system_ini_name = config_read_string(config,section,"SystemINI","system.ini");
         dram_size = config_read_int(config, section, "DRAMSize", 16384);
         CPUClkFreq = config_read_llint(config,section,"CPUClock", 1000000000);
 

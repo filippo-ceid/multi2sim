@@ -1191,6 +1191,7 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 	{
 		mem_debug("  %lld %lld 0x%x %s find and lock finish (err=%d)\n", esim_cycle, stack->id,
 			stack->tag, mod->name, stack->err);
+                //mem_debug ("==========================================================\n");
 		mem_trace("mem.access name=\"A-%lld\" state=\"%s:find_and_lock_finish\"\n",
 			stack->id, mod->name);
 
@@ -1216,8 +1217,8 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 
 		/* If this is a main memory, the block is here. A previous miss was just a miss
 		 * in the directory. */
-		if ( (mod->kind == mod_kind_main_memory || mod->kind == mod_kind_dram_main_memory) 
-                    && !stack->state) // MY CODE
+		if ( ( (mod->kind == mod_kind_main_memory) || (mod->kind == mod_kind_dram_main_memory)) 
+                    && (!stack->state) ) // MY CODE
 		{
 			stack->state = cache_block_exclusive;
 			cache_set_block(mod->cache, stack->set, stack->way,

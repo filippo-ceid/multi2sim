@@ -720,14 +720,23 @@ void mod_dram_req_insert(struct mod_t *mod, struct mod_stack_t *stack, unsigned 
    new_node->address = stack->addr;
    new_node->iswrite = iswrite;
    new_node->next = NULL;
-   new_node->prev = mod->dram_pending_request_tail;
-   mod->dram_pending_request_tail = new_node;
+   
 
    if (mod->dram_pending_request_head == NULL) 
    {
       mod->dram_pending_request_head = new_node;
+      mod->dram_pending_request_tail = new_node;
+      new_node->prev = NULL;
+      return;
    }
+
+   new_node->prev = mod->dram_pending_request_tail;
+   mod->dram_pending_request_tail->next = new_node;
+   mod->dram_pending_request_tail = new_node;
+
+   return;
 }
+
 struct mod_stack_t * mod_dram_req_remove(struct mod_t *mod, unsigned int address, unsigned char iswrite)
 {
    struct dram_req_list_t * ptr;
@@ -740,15 +749,35 @@ struct mod_stack_t * mod_dram_req_remove(struct mod_t *mod, unsigned int address
 
    ptr = mod->dram_pending_request_head;
 
+   //printf("req remove: head=0x%x head->addr:0x%x address=0x%x\n",ptr,ptr->address,address);
+   //fflush(stdout);
+
    while (ptr) 
    {
       if ((ptr->address == address)&&(ptr->iswrite == iswrite))
       {
          ret = ptr->stack;
-         ptr->prev->next = ptr->next;
-         ptr->next->prev = ptr->prev;
-         free(ptr);
 
+         if (ptr == mod->dram_pending_request_head) 
+         {
+            mod->dram_pending_request_head = ptr->next;
+         }
+
+         if (ptr == mod->dram_pending_request_tail) 
+         {
+            mod->dram_pending_request_tail = ptr->prev;
+         }
+
+         if (ptr->prev) 
+         {
+            ptr->prev->next = ptr->next;
+         }
+         if (ptr->next) 
+         {
+            ptr->next->prev = ptr->prev;
+         }
+         free(ptr);
+         //printf("Got it: 0x%x\n",ptr->stack);fflush(stdout);
          return ret;
       }
       ptr = ptr->next;
