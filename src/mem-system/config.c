@@ -496,6 +496,16 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
 	struct net_t *net;
 	struct net_node_t *net_node;
 
+        // MY CODE
+        char * char_type_str;
+        // MY CODE
+        char * ini_dir;
+        char * dram_ini_name;
+        char * system_ini_name;
+        int dram_size;
+        unsigned long long CPUClkFreq;
+
+        
 	/* Cache parameters */
 	snprintf(buf, sizeof buf, "CacheGeometry %s",
 		config_read_string(config, section, "Geometry", ""));
@@ -521,6 +531,17 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
 	prefetcher_ghb_size = config_read_int(config, buf, "PrefetcherGHBSize", 256);
 	prefetcher_it_size = config_read_int(config, buf, "PrefetcherITSize", 64);
 	prefetcher_lookup_depth = config_read_int(config, buf, "PrefetcherLookupDepth", 2);
+
+        // MY CODE
+        char_type_str = config_read_string(config, section, "CacheType", "SRAM");
+
+        ini_dir = config_read_string(config,section,"INIDir","/home/ray/WORK/multi2sim/ini");
+        dram_ini_name = config_read_string(config,section,"DRAMINI","DDR2_micron_16M_8b_x8_sg3E.ini");
+        system_ini_name = config_read_string(config,section,"SystemINI","system.ini");
+        dram_size = config_read_int(config, section, "DRAMSize", 16384);
+        CPUClkFreq = config_read_llint(config,section,"CPUClock", 2000000000);
+
+       
 
 	/* Checks */
 	policy = str_map_string_case(&cache_policy_map, policy_str);
@@ -588,6 +609,26 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
 
 	/* Create cache */
 	mod->cache = cache_create(mod->name, num_sets, block_size, assoc, policy);
+
+        // MY CODE
+        if ( strcasecmp(char_type_str,"DRAM")==0 ) 
+        {
+           mod->DRAM = dramsim2_init( (void*)dramcache_read_callback, 
+                                      (void*)dramcache_write_callback, 
+                                      dram_size, 
+                                      dram_ini_name, 
+                                      system_ini_name, 
+                                      ini_dir );
+           mod->dram_pending_request_head = NULL;
+           mod->dram_pending_request_tail = NULL;
+           memory_setCPUClockSpeed(mod->DRAM, CPUClkFreq);
+        }
+        else
+        {
+           mod->DRAM = NULL;
+           mod->dram_pending_request_head = NULL;
+           mod->dram_pending_request_tail = NULL;
+        }
 
 	/* Fill in prefetcher parameters */
 	if (enable_prefetcher)
@@ -689,6 +730,7 @@ static struct mod_t *mem_config_read_dram(struct config_t *config, char *section
 	struct net_t *net;
 	struct net_node_t *net_node;
 
+        // MY CODE
         char * ini_dir;
         char * dram_ini_name;
         char * system_ini_name;
@@ -699,7 +741,7 @@ static struct mod_t *mem_config_read_dram(struct config_t *config, char *section
         dram_ini_name = config_read_string(config,section,"DRAMINI","DDR2_micron_16M_8b_x8_sg3E.ini");
         system_ini_name = config_read_string(config,section,"SystemINI","system.ini");
         dram_size = config_read_int(config, section, "DRAMSize", 16384);
-        CPUClkFreq = config_read_llint(config,section,"CPUClock", 1000000000);
+        CPUClkFreq = config_read_llint(config,section,"CPUClock", 2000000000);
 
         // Keep the rest to make other funtions happy 
         // ==========================================

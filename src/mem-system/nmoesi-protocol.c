@@ -1910,7 +1910,12 @@ void mod_handler_nmoesi_read_request(int event, void *data)
                    dram_add_request(stack->target_mod, stack, 0);
                    return;
                 }
-
+                if ( (stack->target_mod->kind == mod_kind_cache) 
+                     && (stack->target_mod->DRAM != NULL) )
+                {
+                   dramcache_add_request(stack->target_mod, stack, 0);
+                   return;
+                }
 
 		int latency = stack->reply == reply_ack_data_sent_to_peer ? 0 : target_mod->latency;
 		esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_REPLY, stack, latency);
@@ -2471,7 +2476,12 @@ void mod_handler_nmoesi_write_request(int event, void *data)
                    dram_add_request(stack->target_mod, stack, 1);
                    return;
                 }
-
+                if ( (stack->target_mod->kind == mod_kind_cache) 
+                     && (stack->target_mod->DRAM != NULL) )
+                {
+                   dramcache_add_request(stack->target_mod, stack, 1);
+                   return;
+                }
 
 		int latency = stack->reply == reply_ack_data_sent_to_peer ? 0 : target_mod->latency;
 		esim_schedule_event(EV_MOD_NMOESI_WRITE_REQUEST_REPLY, stack, latency);

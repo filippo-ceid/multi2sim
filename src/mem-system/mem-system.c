@@ -413,7 +413,69 @@ void dram_update(void)
    {
       return;
    }
+
    memory_update(dram_mod->DRAM);
+
+   return;
+}
+
+void dramcache_read_callback(unsigned id, unsigned long long address, unsigned long long clock_cycle)
+{
+   struct mod_stack_t * stack;
+   struct mod_t * dramcache_mod;
+   //printf("dram read callback: addr=0x%x\n",address);
+   //fflush(stdout);
+   dramcache_mod = mod_get_dramcache_mod();
+   //printf("dram read callback: dram_mod=0x%x\n",dramcache_mod);
+   //fflush(stdout);
+   stack = mod_dram_req_remove(dramcache_mod,address,0);
+   //printf("dram read callback: stack=0x%x\n",stack);
+   //fflush(stdout);
+
+   // Add reply event
+   esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_REPLY, stack, 0);
+   //printf("dram read callback finish\n");
+   //fflush(stdout);
+   return;
+}
+
+void dramcache_write_callback(unsigned id, unsigned long long address, unsigned long long clock_cycle)
+{
+   struct mod_stack_t * stack;
+   struct mod_t * dramcache_mod;
+
+   dramcache_mod = mod_get_dramcache_mod();
+   stack = mod_dram_req_remove(dramcache_mod,address,1);
+
+   // Add reply event
+   esim_schedule_event(EV_MOD_NMOESI_WRITE_REQUEST_REPLY, stack, 0);
+
+   return;
+}
+
+void dramcache_add_request(struct mod_t * dramcache_mod, struct mod_stack_t *stack, unsigned char iswrite)
+{
+   //printf("  %lld %lld 0x%x %s dram add request \n", esim_cycle, stack->id,stack->tag, dramcache_mod->name);
+   //fflush(stdout);
+   mod_dram_req_insert(dramcache_mod,stack,iswrite);
+   memory_addtransaction(dramcache_mod->DRAM, iswrite, stack->addr);
+   //printf("dram add request finish. dram_mod=0x%x stack=0x%x, addr=0x%x\n",dramcache_mod, stack,stack->addr);
+   //fflush(stdout);
+   return;
+}
+
+void dramcache_update(void)
+{
+   struct mod_t * dramcache_mod;
+
+   dramcache_mod = mod_get_dramcache_mod();
+
+   if (dramcache_mod == NULL || dramcache_mod->DRAM == NULL) 
+   {
+      return;
+   }
+
+   memory_update(dramcache_mod->DRAM);
 
    return;
 }

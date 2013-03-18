@@ -710,7 +710,7 @@ void mod_dram_req_insert(struct mod_t *mod, struct mod_stack_t *stack, unsigned 
 {
    struct dram_req_list_t * new_node;
 
-   if (mod->kind != mod_kind_dram_main_memory) 
+   if (mod->DRAM == NULL) 
    {
       return;
    }
@@ -803,3 +803,22 @@ struct mod_t * mod_get_dram_mod(void)
 
    return NULL;
 }
+
+struct mod_t * mod_get_dramcache_mod(void)
+{
+   struct mod_t *mod;
+   int i;
+
+   for (i = 0; i < list_count(mem_system->mod_list); i++)
+   {
+      mod = list_get(mem_system->mod_list, i);
+      if ( (mod->kind == mod_kind_cache) && (mod->DRAM!=NULL) ) 
+      {
+         return mod;
+      }
+   }
+
+   return NULL;
+}
+
+

@@ -1530,8 +1530,11 @@ void m2s_loop(void)
 
 		// MY CODE
 		// push dramsim2 forward by 1 cpu cycle
-		if (timing_running) 
+		if (timing_running)
+		{
 			dram_update();
+			dramcache_update();
+		}
 
 		/* Event-driven simulation. Only process events and advance to next global
 		 * simulation cycle if any architecture performed a useful timing simulation. */
