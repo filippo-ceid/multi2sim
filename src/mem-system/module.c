@@ -706,7 +706,7 @@ void mod_client_info_free(struct mod_t *mod, struct mod_client_info_t *client_in
 
 
 // MY CODE
-void mod_dram_req_insert(struct mod_t *mod, struct mod_stack_t *stack, unsigned char iswrite)
+void mod_dram_req_insert(struct mod_t *mod, struct mod_stack_t *stack, unsigned int addr, unsigned char iswrite)
 {
    struct dram_req_list_t * new_node;
 
@@ -717,7 +717,7 @@ void mod_dram_req_insert(struct mod_t *mod, struct mod_stack_t *stack, unsigned 
 
    new_node = (struct dram_req_list_t *) xcalloc(1, sizeof(struct dram_req_list_t));
    new_node->stack = stack;
-   new_node->address = stack->addr;
+   new_node->address = addr;
    new_node->iswrite = iswrite;
    new_node->next = NULL;
    

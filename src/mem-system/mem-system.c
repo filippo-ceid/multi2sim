@@ -397,7 +397,7 @@ void dram_add_request(struct mod_t * dram_mod, struct mod_stack_t *stack, unsign
 {
    //printf("  %lld %lld 0x%x %s dram add request \n", esim_cycle, stack->id,stack->tag, dram_mod->name);
    //fflush(stdout);
-   mod_dram_req_insert(dram_mod,stack,iswrite);
+   mod_dram_req_insert(dram_mod,stack,stack->addr,iswrite);
    memory_addtransaction(dram_mod->DRAM, iswrite, stack->addr);
    //printf("dram add request finish. dram_mod=0x%x stack=0x%x, addr=0x%x\n",dram_mod, stack,stack->addr);
    //fflush(stdout);
@@ -423,19 +423,25 @@ void dramcache_read_callback(unsigned id, unsigned long long address, unsigned l
 {
    struct mod_stack_t * stack;
    struct mod_t * dramcache_mod;
-   //printf("dram read callback: addr=0x%x\n",address);
-   //fflush(stdout);
+
    dramcache_mod = mod_get_dramcache_mod();
-   //printf("dram read callback: dram_mod=0x%x\n",dramcache_mod);
-   //fflush(stdout);
    stack = mod_dram_req_remove(dramcache_mod,address,0);
-   //printf("dram read callback: stack=0x%x\n",stack);
-   //fflush(stdout);
 
    // Add reply event
-   esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_REPLY, stack, 0);
-   //printf("dram read callback finish\n");
-   //fflush(stdout);
+   if (stack->dramcache_access_kind == tag_access) 
+   {
+      esim_schedule_event(EV_MOD_NMOESI_FIND_AND_LOCK_FINISH, stack, 0);
+   }
+   else if (stack->dramcache_access_kind == data_access) 
+   {
+      esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_REPLY, stack, 0);
+   }
+   else 
+   {
+      return;
+   }
+   
+
    return;
 }
 
@@ -448,19 +454,54 @@ void dramcache_write_callback(unsigned id, unsigned long long address, unsigned 
    stack = mod_dram_req_remove(dramcache_mod,address,1);
 
    // Add reply event
-   esim_schedule_event(EV_MOD_NMOESI_WRITE_REQUEST_REPLY, stack, 0);
-
+   if (stack->dramcache_access_kind == tag_access) 
+   {
+      return;
+   }
+   else if (stack->dramcache_access_kind == data_access) 
+   {
+      esim_schedule_event(EV_MOD_NMOESI_WRITE_REQUEST_REPLY, stack, 1);
+   }
+   else if (stack->dramcache_access_kind == new_block_allocation) 
+   {
+      cache_set_block(stack->target_mod->cache, stack->set, stack->way, stack->tag,
+			stack->shared ? cache_block_shared : cache_block_exclusive);
+   }
    return;
 }
 
 void dramcache_add_request(struct mod_t * dramcache_mod, struct mod_stack_t *stack, unsigned char iswrite)
 {
-   //printf("  %lld %lld 0x%x %s dram add request \n", esim_cycle, stack->id,stack->tag, dramcache_mod->name);
-   //fflush(stdout);
-   mod_dram_req_insert(dramcache_mod,stack,iswrite);
-   memory_addtransaction(dramcache_mod->DRAM, iswrite, stack->addr);
-   //printf("dram add request finish. dram_mod=0x%x stack=0x%x, addr=0x%x\n",dramcache_mod, stack,stack->addr);
-   //fflush(stdout);
+   int set_num = stack->set;
+   int row_cnt=0;
+   int col_cnt=0;
+   unsigned int new_addr=0;
+
+   // address remapping for alloy-cache
+   // TAD-72B: tag-8B data-64B 
+   // 2KB row buffer: 28 TADs (32 bytes unused)
+   row_cnt = set_num/28;
+   col_cnt = set_num%28;
+
+   if (stack->dramcache_access_kind == tag_access) 
+   {
+      new_addr = (1<<11)*row_cnt+(col_cnt*72);
+      new_addr = (new_addr>>6)<<6;
+   }
+   else if (stack->dramcache_access_kind == data_access) 
+   {
+      new_addr = (1<<11)*row_cnt+(col_cnt*72)+71;
+      new_addr = (new_addr>>6)<<6;
+   }
+   else // new line allocation
+   {
+      new_addr = (1<<11)*row_cnt+(col_cnt*72);
+      new_addr = (new_addr>>6)<<6;
+   }
+
+   mod_dram_req_insert(dramcache_mod,stack,new_addr,iswrite);
+   memory_addtransaction(dramcache_mod->DRAM, iswrite, new_addr);
+
    return;
 }
 

@@ -50,13 +50,23 @@ enum mod_message_type_t
 	message_none = 0,
 	message_clear_owner
 };
-
+// MY CODE
+enum dramcache_type_t
+{
+      none = 0,
+      tag_access,
+      data_access,
+      new_block_allocation
+};
 /* Stack */
 struct mod_stack_t
 {
 	long long id;
 	enum mod_access_kind_t access_kind;
 	int *witness_ptr;
+
+	// MY CODE
+	enum dramcache_type_t dramcache_access_kind;
 
 	struct linked_list_t *event_queue;
 	void *event_queue_item;

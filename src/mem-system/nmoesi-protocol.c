@@ -1182,6 +1182,17 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 			return;
 		}
 
+                // MY CODE
+                // now tag accesses become dram requests.
+                if ( (stack->mod->kind == mod_kind_cache) 
+                     && (stack->mod->DRAM != NULL) )
+                {
+                   stack->dramcache_access_kind = tag_access;
+                   dramcache_add_request(stack->mod, stack, 0);
+                   return;
+                }
+
+
 		/* Continue */
 		esim_schedule_event(EV_MOD_NMOESI_FIND_AND_LOCK_FINISH, stack, 0);
 		return;
@@ -1809,8 +1820,21 @@ void mod_handler_nmoesi_read_request(int event, void *data)
 		/* Set block state to excl/shared depending on the return value 'shared'
 		 * that comes from a read request into the next cache level.
 		 * Also set the tag of the block. */
-		cache_set_block(target_mod->cache, stack->set, stack->way, stack->tag,
-			stack->shared ? cache_block_shared : cache_block_exclusive);
+
+                // MY CODE
+                if ( (stack->target_mod->kind == mod_kind_cache) 
+                     && (stack->target_mod->DRAM != NULL) )
+                {
+                   stack->dramcache_access_kind = new_block_allocation;
+                   dramcache_add_request(stack->target_mod, stack, 1);
+                   return;
+                }   
+                else
+                {
+                   cache_set_block(target_mod->cache, stack->set, stack->way, stack->tag,
+                           stack->shared ? cache_block_shared : cache_block_exclusive);
+                }
+
 		esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_UPDOWN_FINISH, stack, 0);
 		return;
 	}
@@ -1913,9 +1937,10 @@ void mod_handler_nmoesi_read_request(int event, void *data)
                 if ( (stack->target_mod->kind == mod_kind_cache) 
                      && (stack->target_mod->DRAM != NULL) )
                 {
+                   stack->dramcache_access_kind = data_access;
                    dramcache_add_request(stack->target_mod, stack, 0);
                    return;
-                }
+                }                            
 
 		int latency = stack->reply == reply_ack_data_sent_to_peer ? 0 : target_mod->latency;
 		esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_REPLY, stack, latency);
@@ -2479,6 +2504,7 @@ void mod_handler_nmoesi_write_request(int event, void *data)
                 if ( (stack->target_mod->kind == mod_kind_cache) 
                      && (stack->target_mod->DRAM != NULL) )
                 {
+                   stack->dramcache_access_kind = data_access;
                    dramcache_add_request(stack->target_mod, stack, 1);
                    return;
                 }

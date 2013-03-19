@@ -252,7 +252,7 @@ struct mod_t
 };
 
 // MY CODE
-void mod_dram_req_insert(struct mod_t *mod, struct mod_stack_t *stack, unsigned char iswrite);
+void mod_dram_req_insert(struct mod_t *mod, struct mod_stack_t *stack, unsigned int addr, unsigned char iswrite);
 struct mod_stack_t * mod_dram_req_remove(struct mod_t *mod, unsigned int address, unsigned char iswrite);
 struct mod_t * mod_get_dram_mod(void);
 struct mod_t * mod_get_dramcache_mod(void);
