@@ -1183,13 +1183,12 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 		}
 
                 // MY CODE
-                // now tag accesses become dram requests.
+                // DRAM cache: record hit/miss info
                 if ( (stack->mod->kind == mod_kind_cache) 
                      && (stack->mod->DRAM != NULL) )
                 {
-                   stack->dramcache_access_kind = tag_access;
-                   dramcache_add_request(stack->mod, stack, 0);
-                   return;
+                   mod_insert_dramcache_info(stack->mod, stack->id, stack->hit==0 ? 0 : 1, stack->addr);
+                   //return;
                 }
 
 
@@ -1242,6 +1241,11 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 		ret->way = stack->way;
 		ret->state = stack->state;
 		ret->tag = stack->tag;
+
+                // MY CODE
+                //ret->hit = stack->hit;
+                //ret->read = stack->read;
+
 		mod_stack_return(stack);
 		return;
 	}
@@ -1822,13 +1826,14 @@ void mod_handler_nmoesi_read_request(int event, void *data)
 		 * Also set the tag of the block. */
 
                 // MY CODE
+                // DRAM cache: allocate new cache line
+                // event will be replied as usual. 
+                // But the cache_set_block time will be delayed
                 if ( (stack->target_mod->kind == mod_kind_cache) 
                      && (stack->target_mod->DRAM != NULL) )
                 {
-                   stack->dramcache_access_kind = new_block_allocation;
-                   dramcache_add_request(stack->target_mod, stack, 1);
-                   return;
-                }   
+                   dramcache_add_request(stack->target_mod, stack, 1, new_block_allocation);
+		}   
                 else
                 {
                    cache_set_block(target_mod->cache, stack->set, stack->way, stack->tag,
@@ -1929,16 +1934,25 @@ void mod_handler_nmoesi_read_request(int event, void *data)
 		dir_entry_unlock(dir, stack->set, stack->way);
 
                 // MY CODE
+                // DRAM main memory
                 if (stack->target_mod->kind == mod_kind_dram_main_memory) 
                 {
                    dram_add_request(stack->target_mod, stack, 0);
                    return;
                 }
+                // DRAM cache: fetch cache line tag/data
                 if ( (stack->target_mod->kind == mod_kind_cache) 
                      && (stack->target_mod->DRAM != NULL) )
                 {
-                   stack->dramcache_access_kind = data_access;
-                   dramcache_add_request(stack->target_mod, stack, 0);
+                   if ( mod_get_dramcache_info(stack->target_mod, stack->id, stack->addr) ) 
+                   {
+                      dramcache_add_request(stack->target_mod, stack, 0, tag_access_hit);
+                      dramcache_add_request(stack->target_mod, stack, 0, data_access);
+                   }
+                   else
+                   {
+                      dramcache_add_request(stack->target_mod, stack, 0, tag_access_readmiss);
+                   }
                    return;
                 }                            
 
@@ -2496,16 +2510,27 @@ void mod_handler_nmoesi_write_request(int event, void *data)
 		dir_entry_unlock(target_mod->dir, stack->set, stack->way);
 
                 // MY CODE
+                // DRAM main memory
                 if (stack->target_mod->kind == mod_kind_dram_main_memory) 
                 {
                    dram_add_request(stack->target_mod, stack, 1);
                    return;
                 }
+
+                // DRAM cache: write cache line data
                 if ( (stack->target_mod->kind == mod_kind_cache) 
                      && (stack->target_mod->DRAM != NULL) )
                 {
-                   stack->dramcache_access_kind = data_access;
-                   dramcache_add_request(stack->target_mod, stack, 1);
+                   if ( mod_get_dramcache_info(stack->target_mod, stack->id, stack->addr) ) 
+                   {
+                      printf("flag\n");fflush(stdout);
+                      dramcache_add_request(stack->target_mod, stack, 0, tag_access_hit);
+                      dramcache_add_request(stack->target_mod, stack, 1, data_access);
+                   }
+                   else
+                   {
+                      dramcache_add_request(stack->target_mod, stack, 0, tag_access_writemiss);
+                   }
                    return;
                 }
 

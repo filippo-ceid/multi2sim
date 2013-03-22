@@ -706,7 +706,11 @@ void mod_client_info_free(struct mod_t *mod, struct mod_client_info_t *client_in
 
 
 // MY CODE
-void mod_dram_req_insert(struct mod_t *mod, struct mod_stack_t *stack, unsigned int addr, unsigned char iswrite)
+// 
+// insert a new node to given mod's DRAM request queue
+void mod_dram_req_insert(struct mod_t *mod, struct mod_stack_t *stack, 
+                         unsigned int addr, unsigned char iswrite,
+                         enum dramcache_type_t access_type)
 {
    struct dram_req_list_t * new_node;
 
@@ -719,8 +723,30 @@ void mod_dram_req_insert(struct mod_t *mod, struct mod_stack_t *stack, unsigned 
    new_node->stack = stack;
    new_node->address = addr;
    new_node->iswrite = iswrite;
+   new_node->access_type = access_type;
    new_node->next = NULL;
    
+   // for new_block_allocation, the original event stack will be 
+   // replied and freed before the actual block allocation time. 
+   // Need to create a new one to keep set/way/tag data.
+   if (access_type == new_block_allocation) 
+   {
+      /* Initialize */
+	new_node->stack = xcalloc(1, sizeof(struct mod_stack_t));
+	new_node->stack->id = stack->id;
+	new_node->stack->mod = stack->mod;
+	new_node->stack->addr = stack->addr;
+	new_node->stack->ret_event = stack->ret_event;
+	new_node->stack->ret_stack = stack->ret_stack;
+	if (stack->ret_stack != NULL)
+		new_node->stack->client_info = stack->client_info;
+	new_node->stack->way = stack->way;
+	new_node->stack->set = stack->set;
+	new_node->stack->tag = stack->tag;
+        new_node->stack->target_mod = stack->target_mod;
+        new_node->stack->shared = stack->shared;
+   }
+
 
    if (mod->dram_pending_request_head == NULL) 
    {
@@ -737,6 +763,34 @@ void mod_dram_req_insert(struct mod_t *mod, struct mod_stack_t *stack, unsigned 
    return;
 }
 
+// search with the given address in DRAM request queue and 
+// return its access_type.
+enum dramcache_type_t mod_dram_req_type(struct mod_t *mod, 
+                                          unsigned int address, 
+                                          unsigned char iswrite)
+{
+   struct dram_req_list_t * ptr;
+
+   if (mod->dram_pending_request_head == NULL) 
+   {
+      return none;
+   }
+
+   ptr = mod->dram_pending_request_head;
+
+   while (ptr) 
+   {
+      if ((ptr->address == address)&&(ptr->iswrite == iswrite))
+      {
+
+         return ptr->access_type;
+      }
+      ptr = ptr->next;
+   }
+}
+
+// search with the given address in DRAM request queue. 
+// return the found node's stack and remove the node from queue.
 struct mod_stack_t * mod_dram_req_remove(struct mod_t *mod, unsigned int address, unsigned char iswrite)
 {
    struct dram_req_list_t * ptr;
@@ -749,8 +803,6 @@ struct mod_stack_t * mod_dram_req_remove(struct mod_t *mod, unsigned int address
 
    ptr = mod->dram_pending_request_head;
 
-   //printf("req remove: head=0x%x head->addr:0x%x address=0x%x\n",ptr,ptr->address,address);
-   //fflush(stdout);
 
    while (ptr) 
    {
@@ -776,8 +828,7 @@ struct mod_stack_t * mod_dram_req_remove(struct mod_t *mod, unsigned int address
          {
             ptr->next->prev = ptr->prev;
          }
-         free(ptr);
-         //printf("Got it: 0x%x\n",ptr->stack);fflush(stdout);
+
          return ret;
       }
       ptr = ptr->next;
@@ -787,6 +838,8 @@ struct mod_stack_t * mod_dram_req_remove(struct mod_t *mod, unsigned int address
    return NULL;
 }
 
+// get DRAM mod pointer from mod_list
+// assume that there's only one DRAM in system. 
 struct mod_t * mod_get_dram_mod(void)
 {
    struct mod_t *mod;
@@ -804,6 +857,8 @@ struct mod_t * mod_get_dram_mod(void)
    return NULL;
 }
 
+// get DRAM cache mod pointer from mod_list
+// assume that there's only one DRAM cache in system.
 struct mod_t * mod_get_dramcache_mod(void)
 {
    struct mod_t *mod;
@@ -821,4 +876,83 @@ struct mod_t * mod_get_dramcache_mod(void)
    return NULL;
 }
 
+//
+void mod_insert_dramcache_info(struct mod_t *mod, unsigned long long id, unsigned int hit, unsigned int addr)
+{
+   struct dramcache_info_list_t * new_node;
+   struct dramcache_info_list_t * ptr;
 
+   if (mod->DRAM == NULL) 
+   {
+      return;
+   }
+
+   new_node = (struct dramcache_info_list_t *) xcalloc(1, sizeof(struct dramcache_info_list_t));
+   new_node->hit = hit;
+   new_node->id = id;
+   new_node->addr = addr;
+   new_node->next = NULL;
+   
+   //printf("mod_insert_dramcache_info: hit:%d id:%lld addr:0x%x\n",hit, id, addr);fflush(stdout);
+
+   if (mod->dramcache_hit_info == NULL) 
+   {
+      mod->dramcache_hit_info = new_node;
+      //printf("mod_insert_dramcache_info: finish\n");fflush(stdout);
+
+      return;
+   }
+
+   ptr = mod->dramcache_hit_info;
+
+   while (ptr->next) 
+   {
+      ptr = ptr->next;
+   }
+
+   ptr->next = new_node;
+   //printf("mod_insert_dramcache_info: finish\n");fflush(stdout);
+   return;
+}
+
+// 
+unsigned int mod_get_dramcache_info(struct mod_t *mod, unsigned long long id, unsigned int addr)
+{
+   struct dramcache_info_list_t * ptr;
+   struct dramcache_info_list_t * ptr_prev;
+   unsigned int ret;
+
+   if (mod->DRAM == NULL) 
+   {
+      return 0;
+   }
+
+   ptr = mod->dramcache_hit_info;
+   ptr_prev = NULL;
+
+   while (ptr) 
+   {
+      if ( (ptr->id == id) && (ptr->addr == addr) )
+      {
+         ret = ptr->hit;
+
+         if (ptr == mod->dramcache_hit_info) 
+         {
+            mod->dramcache_hit_info = ptr->next;
+         }
+         else
+         {
+            ptr_prev->next = ptr->next; 
+         }
+         //printf("mod_get_dramcache_info: hit:%d id:%lld addr:0x%x ptr:0x%x\n",ret, id,addr, ptr);fflush(stdout);
+         free (ptr);
+         //printf("mod_get_dramcache_info: finish\n");fflush(stdout);
+         return ret;
+      }
+
+      ptr_prev = ptr;
+      ptr = ptr->next;
+   }
+   //printf("mod_get_dramcache_info: finish not found\n");fflush(stdout);
+   return 0;
+}

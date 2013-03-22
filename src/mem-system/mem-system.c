@@ -353,56 +353,51 @@ struct net_t *mem_system_get_net(char *net_name)
 }
 
 // MY CODE
+//------FUNCTIONS FOR DRAM MAINMEMORY------//
+
+// read callback function
+// will be call by DRAMSim2 whenever a read request is finished
 void dram_read_callback(unsigned id, unsigned long long address, unsigned long long clock_cycle)
 {
    struct mod_stack_t * stack;
    struct mod_t * dram_mod;
 
-   //printf("dram read callback: addr=0x%x\n",address);
-   //fflush(stdout);
-
    dram_mod = mod_get_dram_mod();
-   //printf("dram read callback: dram_mod=0x%x\n",dram_mod);
-   //fflush(stdout);
    stack = mod_dram_req_remove(dram_mod,address,0);
-   //printf("dram read callback: stack=0x%x\n",stack);
-   //fflush(stdout);
+
    // Add reply event
    esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_REPLY, stack, 0);
-   //printf("dram read callback finish\n");
-   //fflush(stdout);
+
    return;
 }
-
+// write callback function
+// will be call by DRAMSim2 whenever a write request is finished
 void dram_write_callback(unsigned id, unsigned long long address, unsigned long long clock_cycle)
 {
    struct mod_stack_t * stack;
    struct mod_t * dram_mod;
 
-   //printf("dram write callback\n");
-   //fflush(stdout);
-
    dram_mod = mod_get_dram_mod();
-   
    stack = mod_dram_req_remove(dram_mod,address,1);
 
    // Add reply event
    esim_schedule_event(EV_MOD_NMOESI_WRITE_REQUEST_REPLY, stack, 0);
-   //printf("dram write callback finish\n");
-   //fflush(stdout);
+
    return;
 }
 
+// add a new DRAM request
 void dram_add_request(struct mod_t * dram_mod, struct mod_stack_t *stack, unsigned char iswrite)
 {
-   //printf("  %lld %lld 0x%x %s dram add request \n", esim_cycle, stack->id,stack->tag, dram_mod->name);
-   //fflush(stdout);
-   mod_dram_req_insert(dram_mod,stack,stack->addr,iswrite);
+   // add the request to the global queue
+   mod_dram_req_insert(dram_mod,stack,stack->addr,iswrite, none);
+   // send the request to DRAMSim2
    memory_addtransaction(dram_mod->DRAM, iswrite, stack->addr);
-   //printf("dram add request finish. dram_mod=0x%x stack=0x%x, addr=0x%x\n",dram_mod, stack,stack->addr);
-   //fflush(stdout);
+
 }
 
+// DRAM update
+// will be call once in every CPU cycle.
 void dram_update(void)
 {
    struct mod_t * dram_mod;
@@ -419,25 +414,68 @@ void dram_update(void)
    return;
 }
 
+//------FUNCTIONS FOR DRAM CACHE------//
+// read callback function
+// will be call by DRAMSim2 whenever a read request is finished
 void dramcache_read_callback(unsigned id, unsigned long long address, unsigned long long clock_cycle)
 {
    struct mod_stack_t * stack;
    struct mod_t * dramcache_mod;
+   enum dramcache_type_t access_type;
 
    dramcache_mod = mod_get_dramcache_mod();
+   // get the access type
+   access_type = mod_dram_req_type(dramcache_mod,address,0);
+   // get the stack pointer and remove the request from queue
    stack = mod_dram_req_remove(dramcache_mod,address,0);
 
+
    // Add reply event
-   if (stack->dramcache_access_kind == tag_access) 
+   if (access_type == tag_access_hit)
    {
-      esim_schedule_event(EV_MOD_NMOESI_FIND_AND_LOCK_FINISH, stack, 0);
+      // do nothing
+      mem_debug("  %lld %lld 0x%x %s (addr after mapping: 0x%x) tag read-dram cache callback-hit\n", 
+                esim_cycle, 
+                stack->id,
+                stack->tag, 
+                dramcache_mod->name,
+                address);
    }
-   else if (stack->dramcache_access_kind == data_access) 
+   else if (access_type == tag_access_readmiss)
    {
+      mem_debug("  %lld %lld 0x%x %s (addr after mapping: 0x%x) tag read-dram cache callback-read miss\n", 
+                esim_cycle, 
+                stack->id,
+                stack->tag, 
+                dramcache_mod->name,
+                address);
+      esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_REPLY, stack, 0);
+   }
+   else if (access_type == tag_access_writemiss)
+   {
+      mem_debug("  %lld %lld 0x%x %s (addr after mapping: 0x%x) tag read-dram cache callback-write miss\n", 
+                esim_cycle, 
+                stack->id,
+                stack->tag, 
+                dramcache_mod->name,
+                address);
+      esim_schedule_event(EV_MOD_NMOESI_WRITE_REQUEST_REPLY, stack, 0);
+      
+   }
+   else if (access_type == data_access) 
+   {
+      mem_debug("  %lld %lld 0x%x %s (addr after mapping: 0x%x) data read-dram cache callback\n", 
+                esim_cycle, 
+                stack->id,
+                stack->tag, 
+                dramcache_mod->name,
+                address);
       esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_REPLY, stack, 0);
    }
    else 
    {
+      // something is wrong
+      // for DRAM cache, there should not be other access types for reads.
       return;
    }
    
@@ -445,32 +483,51 @@ void dramcache_read_callback(unsigned id, unsigned long long address, unsigned l
    return;
 }
 
+// write callback function
+// will be call by DRAMSim2 whenever a write request is finished
 void dramcache_write_callback(unsigned id, unsigned long long address, unsigned long long clock_cycle)
 {
    struct mod_stack_t * stack;
    struct mod_t * dramcache_mod;
+   enum dramcache_type_t access_type;
 
    dramcache_mod = mod_get_dramcache_mod();
+   // get the access type
+   access_type = mod_dram_req_type(dramcache_mod, address, 1);
+   // get the stack pointer and remove the request from queue
    stack = mod_dram_req_remove(dramcache_mod,address,1);
 
    // Add reply event
-   if (stack->dramcache_access_kind == tag_access) 
+   if (access_type == data_access) 
    {
-      return;
+      mem_debug("  %lld %lld 0x%x %s (addr after mapping: 0x%x) data write-dram cache callback\n", 
+                esim_cycle, 
+                stack->id,
+                stack->tag, 
+                dramcache_mod->name,
+                address);
+      esim_schedule_event(EV_MOD_NMOESI_WRITE_REQUEST_REPLY, stack, 0);
    }
-   else if (stack->dramcache_access_kind == data_access) 
+   else if (access_type == new_block_allocation) 
    {
-      esim_schedule_event(EV_MOD_NMOESI_WRITE_REQUEST_REPLY, stack, 1);
-   }
-   else if (stack->dramcache_access_kind == new_block_allocation) 
-   {
+      mem_debug("  %lld %lld 0x%x %s (addr after mapping: 0x%x) new line allocation-dram cache callback\n", 
+                esim_cycle, 
+                stack->set,
+                stack->tag, 
+                dramcache_mod->name,
+                address);
       cache_set_block(stack->target_mod->cache, stack->set, stack->way, stack->tag,
 			stack->shared ? cache_block_shared : cache_block_exclusive);
+
+      free(stack);
    }
    return;
 }
 
-void dramcache_add_request(struct mod_t * dramcache_mod, struct mod_stack_t *stack, unsigned char iswrite)
+void dramcache_add_request(struct mod_t * dramcache_mod, 
+                           struct mod_stack_t *stack, 
+                           unsigned char iswrite,
+                           enum dramcache_type_t access_type)
 {
    int set_num = stack->set;
    int row_cnt=0;
@@ -479,32 +536,83 @@ void dramcache_add_request(struct mod_t * dramcache_mod, struct mod_stack_t *sta
 
    // address remapping for alloy-cache
    // TAD-72B: tag-8B data-64B 
-   // 2KB row buffer: 28 TADs (32 bytes unused)
+   // 2KB row buffer: 28 TADs per row (32 bytes unused)
    row_cnt = set_num/28;
    col_cnt = set_num%28;
 
-   if (stack->dramcache_access_kind == tag_access) 
+   if (access_type <= tag_access_writemiss) 
    {
       new_addr = (1<<11)*row_cnt+(col_cnt*72);
-      new_addr = (new_addr>>6)<<6;
+      new_addr = (new_addr>>6)<<6; // align it with 64bytes cache line size
    }
-   else if (stack->dramcache_access_kind == data_access) 
+   else if (access_type == data_access) 
    {
       new_addr = (1<<11)*row_cnt+(col_cnt*72)+71;
-      new_addr = (new_addr>>6)<<6;
+      new_addr = (new_addr>>6)<<6; // align it with 64bytes cache line size
    }
-   else // new line allocation
+   else if (access_type == new_block_allocation)
    {
       new_addr = (1<<11)*row_cnt+(col_cnt*72);
-      new_addr = (new_addr>>6)<<6;
+      new_addr = (new_addr>>6)<<6; // align it with 64bytes cache line size
    }
 
-   mod_dram_req_insert(dramcache_mod,stack,new_addr,iswrite);
+   // add request to the global queue
+   mod_dram_req_insert(dramcache_mod,stack,new_addr,iswrite, access_type);
+   // send the request to DRAMSim2
    memory_addtransaction(dramcache_mod->DRAM, iswrite, new_addr);
 
+   if (iswrite) 
+   {
+      mem_debug("  %lld %lld 0x%x %s (addr after mapping: 0x%x) add write request to dram cache ", 
+                esim_cycle, 
+                stack->id,
+                stack->tag, 
+                dramcache_mod->name,
+                new_addr);
+      if (access_type <= tag_access_writemiss) 
+      {
+         mem_debug(" tag access\n");
+      }
+      else if (access_type == data_access) 
+      {
+         mem_debug(" data access\n");
+      }
+      else if (access_type == new_block_allocation) 
+      {
+            mem_debug(" new line allocation\n");
+      }
+      else
+         mem_debug("\n");
+   }
+   else 
+   {
+      mem_debug("  %lld %lld 0x%x %s (addr after mapping: 0x%x) add read request to dram cache (hit:%d)", 
+                esim_cycle, 
+                stack->id,
+		stack->tag, 
+                dramcache_mod->name,
+                new_addr,
+                stack->hit);
+      if (access_type <= tag_access_writemiss) 
+      {
+         mem_debug(" tag access\n");
+      }
+      else if (access_type == data_access) 
+      {
+         mem_debug(" data access\n");
+      }
+      else if (access_type == new_block_allocation) 
+      {
+            mem_debug(" new line allocation\n");
+      }
+      else
+         mem_debug("\n");
+   }
    return;
 }
 
+// DRAM update
+// will be call once in every CPU cycle.
 void dramcache_update(void)
 {
    struct mod_t * dramcache_mod;

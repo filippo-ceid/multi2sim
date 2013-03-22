@@ -63,7 +63,8 @@ void dram_update(void);
 void dramcache_read_callback(unsigned id, unsigned long long address, unsigned long long clock_cycle);
 void dramcache_write_callback(unsigned id, unsigned long long address, unsigned long long clock_cycle);
 
-void dramcache_add_request(struct mod_t * mod, struct mod_stack_t *stack, unsigned char iswrite);
+void dramcache_add_request(struct mod_t * mod, struct mod_stack_t *stack, 
+                           unsigned char iswrite,enum dramcache_type_t access_type);
 void dramcache_update(void);
 
 #endif

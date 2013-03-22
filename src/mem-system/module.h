@@ -80,16 +80,34 @@ enum mod_range_kind_t
 };
 
 #define MOD_ACCESS_HASH_TABLE_SIZE  17
-
+// MY CODE
+enum dramcache_type_t
+{
+      none = 0,
+      tag_access_hit,
+      tag_access_readmiss,
+      tag_access_writemiss,
+      data_access,
+      new_block_allocation
+};
 // MY CODE
 struct dram_req_list_t
 {
    struct mod_stack_t * stack;
    unsigned int address;
    unsigned char iswrite; 
+   enum dramcache_type_t access_type;
 
    struct dram_req_list_t * prev;
    struct dram_req_list_t * next;
+};
+struct dramcache_info_list_t 
+{
+   struct dramcache_info_list_t * next;
+
+   unsigned int addr;
+   unsigned long long id;
+   unsigned int hit;
 };
 
 /* Memory module */
@@ -158,6 +176,7 @@ struct mod_t
 	void * DRAM;
 	struct dram_req_list_t * dram_pending_request_head;
 	struct dram_req_list_t * dram_pending_request_tail;
+	struct dramcache_info_list_t * dramcache_hit_info;
 
 	/* Low and high memory modules */
 	struct linked_list_t *high_mod_list;
@@ -252,10 +271,21 @@ struct mod_t
 };
 
 // MY CODE
-void mod_dram_req_insert(struct mod_t *mod, struct mod_stack_t *stack, unsigned int addr, unsigned char iswrite);
-struct mod_stack_t * mod_dram_req_remove(struct mod_t *mod, unsigned int address, unsigned char iswrite);
+void mod_dram_req_insert(struct mod_t *mod, struct mod_stack_t *stack, 
+			 unsigned int addr, unsigned char iswrite,
+			 enum dramcache_type_t access_type);
+enum dramcache_type_t mod_dram_req_type(struct mod_t *mod, 
+                                          unsigned int address, 
+                                          unsigned char iswrite);
+struct mod_stack_t * mod_dram_req_remove(struct mod_t *mod, 
+					 unsigned int address, 
+					 unsigned char iswrite);
 struct mod_t * mod_get_dram_mod(void);
 struct mod_t * mod_get_dramcache_mod(void);
+void mod_insert_dramcache_info(struct mod_t *mod, unsigned long long id, unsigned int hit, unsigned int addr);
+unsigned int mod_get_dramcache_info(struct mod_t *mod, unsigned long long id, unsigned int addr);
+//---------------------------------------//
+
 
 struct mod_t *mod_create(char *name, enum mod_kind_t kind, int num_ports,
 	int block_size, int latency);
