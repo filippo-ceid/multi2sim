@@ -1534,6 +1534,12 @@ void m2s_loop(void)
 		{
 			dram_update();
 			dramcache_update();
+
+                        if (esim_finish) 
+			{
+			   dram_printstats();
+			   dramcache_printstats();
+                        }
 		}
 
 		/* Event-driven simulation. Only process events and advance to next global

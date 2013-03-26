@@ -414,6 +414,22 @@ void dram_update(void)
    return;
 }
 
+void dram_printstats(void)
+{
+   struct mod_t * dram_mod;
+
+   dram_mod = mod_get_dram_mod();
+
+   if (dram_mod == NULL || dram_mod->DRAM == NULL) 
+   {
+      return;
+   }
+
+   memory_printstats(dram_mod->DRAM);
+
+   return;
+}
+
 //------FUNCTIONS FOR DRAM CACHE------//
 // read callback function
 // will be call by DRAMSim2 whenever a read request is finished
@@ -630,6 +646,22 @@ void dramcache_update(void)
    }
 
    memory_update(dramcache_mod->DRAM);
+
+   return;
+}
+
+void dramcache_printstats(void)
+{
+   struct mod_t * dramcache_mod;
+
+   dramcache_mod = mod_get_dramcache_mod();
+
+   if (dramcache_mod == NULL || dramcache_mod->DRAM == NULL) 
+   {
+      return;
+   }
+
+   memory_printstats(dramcache_mod->DRAM);
 
    return;
 }

@@ -96,6 +96,13 @@ void memory_setCPUClockSpeed(void* in_obj, unsigned long long cpuClkFreqHz)
 
       return;
 }
+void memory_printstats(void* in_obj)
+{
+      some_object * obj = (some_object*)in_obj;
+      obj->memory->printStats(true);
+
+      return;
+}
 
 }
 

@@ -12,7 +12,7 @@ void* dramsim2_init(void *rFunc, void* wFunc, int size,
 void memory_update(void* in_obj);
 void memory_addtransaction(void* in_obj, unsigned char isWrite, unsigned long long  addr);
 void memory_setCPUClockSpeed(void* in_obj, unsigned long long cpuClkFreqHz);
-
+void memory_printstats(void* in_obj);
 
 #ifdef __cplusplus
 }
