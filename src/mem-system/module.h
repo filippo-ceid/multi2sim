@@ -84,7 +84,8 @@ enum mod_range_kind_t
 enum dramcache_type_t
 {
       none = 0,
-      tag_access_hit,
+      tag_access_readhit,
+      tag_access_writehit,
       tag_access_readmiss,
       tag_access_writemiss,
       data_access,

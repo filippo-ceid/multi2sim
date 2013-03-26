@@ -447,15 +447,25 @@ void dramcache_read_callback(unsigned id, unsigned long long address, unsigned l
 
 
    // Add reply event
-   if (access_type == tag_access_hit)
+   if (access_type == tag_access_writehit)
    {
       // do nothing
-      mem_debug("  %lld %lld 0x%x %s (addr after mapping: 0x%x) tag read-dram cache callback-hit\n", 
+      mem_debug("  %lld %lld 0x%x %s (addr after mapping: 0x%x) tag read-dram cache callback-write hit\n", 
                 esim_cycle, 
                 stack->id,
                 stack->tag, 
                 dramcache_mod->name,
                 address);
+   }
+   else if (access_type == tag_access_readhit)
+   {
+      mem_debug("  %lld %lld 0x%x %s (addr after mapping: 0x%x) tag read-dram cache callback-read hit\n", 
+                esim_cycle, 
+                stack->id,
+                stack->tag, 
+                dramcache_mod->name,
+                address);
+      esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_REPLY, stack, 0);
    }
    else if (access_type == tag_access_readmiss)
    {
@@ -564,24 +574,25 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
    if (access_type <= tag_access_writemiss) 
    {
       new_addr = (1<<11)*row_cnt+(col_cnt*72);
-      new_addr = (new_addr>>6)<<6; // align it with 64bytes cache line size
    }
    else if (access_type == data_access) 
    {
-      new_addr = (1<<11)*row_cnt+(col_cnt*72)+71;
-      new_addr = (new_addr>>6)<<6; // align it with 64bytes cache line size
+      // for alloy cache, data is already fetched by tag access.
+      // so this only happens for stores.
+      new_addr = (1<<11)*row_cnt+(col_cnt*72);
    }
    else if (access_type == new_block_allocation)
    {
       new_addr = (1<<11)*row_cnt+(col_cnt*72);
-      new_addr = (new_addr>>6)<<6; // align it with 64bytes cache line size
-   }
+      
+   }  
 
    // add request to the global queue
    mod_dram_req_insert(dramcache_mod,stack,new_addr,iswrite, access_type);
    // send the request to DRAMSim2
    memory_addtransaction(dramcache_mod->DRAM, iswrite, new_addr);
 
+   // debug info
    if (iswrite) 
    {
       mem_debug("  %lld %lld 0x%x %s (addr after mapping: 0x%x) add write request to dram cache ", 

@@ -48,6 +48,7 @@ namespace DRAMSim
 			void setCPUClockSpeed(uint64_t cpuClkFreqHz);
 			void update();
 			void printStats(bool finalStats);
+                        void setBL(unsigned int burstlength);
 			bool willAcceptTransaction(); 
 			bool willAcceptTransaction(uint64_t addr); 
 			std::ostream &getLogFile();

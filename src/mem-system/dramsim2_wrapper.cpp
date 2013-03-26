@@ -103,6 +103,13 @@ void memory_printstats(void* in_obj)
 
       return;
 }
+void memory_setBL(void* in_obj, unsigned int burstlength)
+{
+      some_object * obj = (some_object*)in_obj;
+      obj->memory->setBL(burstlength);
+
+      return;
+}
 
 }
 

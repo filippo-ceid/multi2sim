@@ -13,7 +13,7 @@ void memory_update(void* in_obj);
 void memory_addtransaction(void* in_obj, unsigned char isWrite, unsigned long long  addr);
 void memory_setCPUClockSpeed(void* in_obj, unsigned long long cpuClkFreqHz);
 void memory_printstats(void* in_obj);
-
+void memory_setBL(void* in_obj, unsigned int burstlength);
 #ifdef __cplusplus
 }
 #endif
