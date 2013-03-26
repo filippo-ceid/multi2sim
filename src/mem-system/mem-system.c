@@ -534,6 +534,11 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
    int col_cnt=0;
    unsigned int new_addr=0;
 
+   // DRAMSim2 setting: 
+   // NUM_COLS=2048
+   // ADDRESS_MAPPING_SCHEME=schemex
+   // mapping: chan:rank:bank:row:col
+   // 
    // address remapping for alloy-cache
    // TAD-72B: tag-8B data-64B 
    // 2KB row buffer: 28 TADs per row (32 bytes unused)
