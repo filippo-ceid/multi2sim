@@ -876,6 +876,44 @@ struct mod_t * mod_get_dramcache_mod(void)
    return NULL;
 }
 
+void mod_dramcache_info_free(unsigned long long id)
+{
+   struct mod_t *mod = mod_get_dramcache_mod();
+   struct dramcache_info_list_t * ptr;
+   struct dramcache_info_list_t * ptr_prev;
+
+   if (mod==NULL) 
+      return;
+   else if (mod->DRAM==NULL) 
+      return;
+
+   ptr = mod->dramcache_hit_info;
+   ptr_prev = NULL;
+
+   while (ptr) 
+   {
+      if ( ptr->id == id )
+      {
+
+         if (ptr == mod->dramcache_hit_info) 
+         {
+            mod->dramcache_hit_info = ptr->next;
+         }
+         else
+         {
+            ptr_prev->next = ptr->next; 
+         }
+         free (ptr);
+         
+      }
+
+      ptr_prev = ptr;
+      ptr = ptr->next;
+   }
+
+   return;
+}
+
 //
 void mod_insert_dramcache_info(struct mod_t *mod, unsigned long long id, unsigned int hit, unsigned int addr)
 {
