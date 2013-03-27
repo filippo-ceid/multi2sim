@@ -300,6 +300,9 @@ void mod_handler_nmoesi_load(int event, void *data)
 		mem_trace("mem.end_access name=\"A-%lld\"\n",
 			stack->id);
 
+		// MY CODE
+		mod_dramcache_info_free(stack->id);
+
 		/* Increment witness variable */
 		if (stack->witness_ptr)
 			(*stack->witness_ptr)++;
@@ -314,6 +317,8 @@ void mod_handler_nmoesi_load(int event, void *data)
 
 		/* Finish access */
 		mod_access_finish(mod, stack);
+
+		
 
 		/* Return */
 		mod_stack_return(stack);
@@ -489,6 +494,9 @@ void mod_handler_nmoesi_store(int event, void *data)
 		mem_trace("mem.end_access name=\"A-%lld\"\n",
 			stack->id);
 
+		// MY CODE
+		mod_dramcache_info_free(stack->id);
+
 		/* Return event queue element into event queue */
 		if (stack->event_queue && stack->event_queue_item)
 			linked_list_add(stack->event_queue, stack->event_queue_item);
@@ -500,8 +508,7 @@ void mod_handler_nmoesi_store(int event, void *data)
 		/* Finish access */
 		mod_access_finish(mod, stack);
 
-		// MY CODE
-		mod_dramcache_info_free(stack->id);
+		
 
 		/* Return */
 		mod_stack_return(stack);
@@ -727,6 +734,9 @@ void mod_handler_nmoesi_nc_store(int event, void *data)
 		mem_trace("mem.end_access name=\"A-%lld\"\n",
 			stack->id);
 
+		// MY CODE
+		mod_dramcache_info_free(stack->id);
+
 		/* Increment witness variable */
 		if (stack->witness_ptr)
 			(*stack->witness_ptr)++;
@@ -742,8 +752,7 @@ void mod_handler_nmoesi_nc_store(int event, void *data)
 		/* Finish access */
 		mod_access_finish(mod, stack);
 
-		// MY CODE
-		mod_dramcache_info_free(stack->id);
+		
 
 		/* Return */
 		mod_stack_return(stack);
@@ -936,6 +945,9 @@ void mod_handler_nmoesi_prefetch(int event, void *data)
 			stack->id, mod->name);
 		mem_trace("mem.end_access name=\"A-%lld\"\n",
 			stack->id);
+
+		// MY CODE
+		mod_dramcache_info_free(stack->id);
 
 		/* Increment witness variable */
 		if (stack->witness_ptr)

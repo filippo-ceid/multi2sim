@@ -903,12 +903,19 @@ void mod_dramcache_info_free(unsigned long long id)
          {
             ptr_prev->next = ptr->next; 
          }
-         free (ptr);
-         
-      }
 
-      ptr_prev = ptr;
-      ptr = ptr->next;
+         free (ptr);
+
+         if (ptr_prev) 
+            ptr = ptr_prev->next;
+         else
+            ptr = mod->dramcache_hit_info;
+      }
+      else 
+      {
+         ptr_prev = ptr;
+         ptr = ptr->next;
+      }
    }
 
    return;
