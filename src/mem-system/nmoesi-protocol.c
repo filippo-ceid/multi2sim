@@ -616,6 +616,7 @@ void mod_handler_nmoesi_nc_store(int event, void *data)
 		if (stack->state == cache_block_modified || stack->state == cache_block_owned)
 		{
 			stack->eviction = 1;
+			
 			new_stack = mod_stack_create(stack->id, mod, 0,
 				EV_MOD_NMOESI_NC_STORE_ACTION, stack);
 			new_stack->set = stack->set;
@@ -1120,6 +1121,7 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 			{
 				stack->way = cache_replace_block(mod->cache, stack->set);
 			}
+			
 		}
 		assert(stack->way >= 0);
 
@@ -1160,8 +1162,29 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 			mem_debug("    %lld 0x%x %s miss -> lru: set=%d, way=%d, state=%s\n",
 				stack->id, stack->tag, mod->name, stack->set, stack->way,
 				str_map_value(&cache_block_state_map, stack->state));
-		}
 
+			//========== MY CODE =========//
+                        if (stack->state) 
+			{
+                           if (mod->cache->sets[stack->set].blocks[stack->way].hasHit) 
+			      stack->victimHasHit = 1; 
+                           else
+			      stack->victimHasHit = 0; 
+			   mod->cache->sets[stack->set].blocks[stack->way].hasHit = 0;
+                        }
+			else
+			{
+			   stack->victimHasHit = 0;
+			   mod->cache->sets[stack->set].blocks[stack->way].hasHit = 0;
+			}
+			//====== END OF MY CODE ======//
+		}
+		//========== MY CODE =========//
+		else
+		{
+			mod->cache->sets[stack->set].blocks[stack->way].hasHit = 1;
+		}
+		//====== END OF MY CODE ======//
 
 		/* Entry is locked. Record the transient tag so that a subsequent lookup
 		 * detects that the block is being brought.
@@ -1192,6 +1215,7 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 		if (!stack->hit && stack->state)
 		{
 			stack->eviction = 1;
+			
 			new_stack = mod_stack_create(stack->id, mod, 0,
 				EV_MOD_NMOESI_FIND_AND_LOCK_FINISH, stack);
 			new_stack->set = stack->set;
@@ -1239,6 +1263,12 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 		if (stack->eviction)
 		{
 			mod->evictions++;
+			//======= MY CODE =======//
+                        if (stack->victimHasHit==0) 
+			{
+			   mod->doa_evictions++;
+                        }
+			//==== END OF MY CODE ===//
 			cache_get_block(mod->cache, stack->set, stack->way, NULL, &stack->state);
 			assert(!stack->state);
 		}

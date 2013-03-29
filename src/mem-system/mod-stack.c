@@ -49,6 +49,8 @@ struct mod_stack_t *mod_stack_create(long long id, struct mod_t *mod,
 	stack->set = -1;
 	stack->tag = -1;
 
+        stack->victimHasHit = 0; //===== MY CODE =====//
+
 	/* Return */
 	return stack;
 }

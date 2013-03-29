@@ -161,6 +161,9 @@ struct cache_t *cache_create(char *name, unsigned int num_sets, unsigned int blo
 			block->way = way;
 			block->way_prev = way ? &cache->sets[set].blocks[way - 1] : NULL;
 			block->way_next = way < assoc - 1 ? &cache->sets[set].blocks[way + 1] : NULL;
+			//======= MY CODE =======//
+			block->hasHit = 0;
+			//==== END OF MY CODE ===//
 		}
 	}
 	
@@ -270,6 +273,7 @@ void cache_access_block(struct cache_t *cache, int set, int way)
 		cache_update_waylist(&cache->sets[set],
 			&cache->sets[set].blocks[way],
 			cache_waylist_head);
+
 }
 
 

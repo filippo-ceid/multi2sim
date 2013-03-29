@@ -256,6 +256,9 @@ void mem_system_dump_report(void)
 		fprintf(f, "HitRatio = %.4g\n", mod->accesses ?
 			(double) mod->hits / mod->accesses : 0.0);
 		fprintf(f, "Evictions = %lld\n", mod->evictions);
+                fprintf(f, "DoA Evictions = %lld\n", mod->doa_evictions);//===== MY CODE =====//
+                fprintf(f, "DoA Ratio = %.4g\n", mod->evictions ? 
+                        (double) mod->doa_evictions/mod->evictions : 0.0);//===== MY CODE =====//
 		fprintf(f, "Retries = %lld\n", mod->read_retries + mod->write_retries + 
 			mod->nc_write_retries);
 		fprintf(f, "\n");

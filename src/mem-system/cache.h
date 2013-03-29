@@ -54,7 +54,7 @@ struct cache_block_t
 
 	enum cache_block_state_t state;
 //-------MY CODE---------//
-
+	unsigned char hasHit;
 //----END OF MY CODE-----//
 };
 

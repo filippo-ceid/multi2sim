@@ -179,6 +179,8 @@ struct mod_t
 	struct dram_req_list_t * dram_pending_request_head;
 	struct dram_req_list_t * dram_pending_request_tail;
 	struct dramcache_info_list_t * dramcache_hit_info;
+
+	long long doa_evictions;
 	//====== END OF MY CODE =====//
 
 	/* Low and high memory modules */
