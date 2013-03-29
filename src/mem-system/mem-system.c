@@ -555,35 +555,58 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
                            unsigned char iswrite,
                            enum dramcache_type_t access_type)
 {
-   int set_num = stack->set;
-   int row_cnt=0;
-   int col_cnt=0;
+   unsigned int set_num=0;
+   unsigned int row_cnt=0;
+   unsigned int col_cnt=0;
    unsigned int new_addr=0;
+   unsigned int lower_bits1=0, lower_bits2=0;
+   unsigned int middle_bits=0;
 
-   // DRAMSim2 setting: 
-   // NUM_COLS=2048
-   // ADDRESS_MAPPING_SCHEME=schemex
-   // mapping: chan:rank:bank:row:col
-   // 
+   // Direct-mapped cache, 64bytes cache line size
+   set_num = ((stack->addr) >> 6) % (4*128*1024*28); // assume 1GB cache size
+
    // address remapping for alloy-cache
    // TAD-72B: tag-8B data-64B 
    // 2KB row buffer: 28 TADs per row (32 bytes unused)
+
    row_cnt = set_num/28;
    col_cnt = set_num%28;
 
+   // DRAMSim2 setting: 
+   // ADDRESS_MAPPING_SCHEME=schemex
+   // mapping: chan:rank:bank:row:col
+   // remapping row_cnt, so that sequencial rows are mapped 
+   // to different channels.
+   // -------------------------
+   // 4 channels: 2 bits
+   // 8 banks:    3 bits
+   // 1024 rows:  10 bits
+   // 1 rank:     0 bit
+   // 2048 cols:  11 bits
+   // BUS 128 bits/16 bytes: 4 bits
+   // -------------------------
+   //  chan  :  rank :  bank  :    row  :   col   : bus offset
+   // 2 bits : 0 bit : 3 bits : 10 bits : 11 bits : 4 bits
+
+   lower_bits1 = row_cnt & ( (1<<4) - 1);
+   lower_bits2 = (row_cnt>>4) & ( (1<<2) - 1);
+   middle_bits = row_cnt>>(4+2);
+
+   row_cnt = (lower_bits2<<(3+10+4)) | (middle_bits<<4) | lower_bits1;
+
    if (access_type <= tag_access_writemiss) 
    {
-      new_addr = (1<<11)*row_cnt+(col_cnt*72);
+      new_addr = (row_cnt<<11)+(col_cnt*72);
    }
    else if (access_type == data_access) 
    {
       // for alloy cache, data is already fetched by tag access.
       // so this only happens for stores.
-      new_addr = (1<<11)*row_cnt+(col_cnt*72);
+      new_addr = (row_cnt<<11)+(col_cnt*72);
    }
    else if (access_type == new_block_allocation)
    {
-      new_addr = (1<<11)*row_cnt+(col_cnt*72);
+      new_addr = (row_cnt<<11)+(col_cnt*72);
       
    }  
 
@@ -598,7 +621,7 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
       mem_debug("  %lld %lld 0x%x %s (addr after mapping: 0x%x) add write request to dram cache ", 
                 esim_cycle, 
                 stack->id,
-                stack->tag, 
+                stack->addr, 
                 dramcache_mod->name,
                 new_addr);
       if (access_type <= tag_access_writemiss) 
@@ -621,7 +644,7 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
       mem_debug("  %lld %lld 0x%x %s (addr after mapping: 0x%x) add read request to dram cache (hit:%d)", 
                 esim_cycle, 
                 stack->id,
-		stack->tag, 
+		stack->addr, 
                 dramcache_mod->name,
                 new_addr,
                 stack->hit);
