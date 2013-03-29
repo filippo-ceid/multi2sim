@@ -572,7 +572,7 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
    unsigned int row_cnt=0;
    unsigned int col_cnt=0;
    unsigned int new_addr=0;
-   unsigned int lower_bits1=0, lower_bits2=0;
+   unsigned int lower_bits1=0, lower_bits2=0, lower_bits3=0;
    unsigned int middle_bits=0;
 
    // Direct-mapped cache, 64bytes cache line size
@@ -601,11 +601,14 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
    //  chan  :  rank :  bank  :    row  :   col   : bus offset
    // 2 bits : 0 bit : 3 bits : 10 bits : 11 bits : 4 bits
 
-   lower_bits1 = row_cnt & ( (1<<4) - 1);
-   lower_bits2 = (row_cnt>>4) & ( (1<<2) - 1);
-   middle_bits = row_cnt>>(4+2);
+   lower_bits1 = row_cnt & ( (1<<4) - 1); // 4 bits [3:0]
+   lower_bits2 = (row_cnt>>4) & ( (1<<2) - 1); // 2 bits [5:4]
+   lower_bits3 = (row_cnt>>(4+2)) & ( (1<<3) - 1); // 3 bits [8:6]
+   middle_bits = row_cnt>>(4+2+3);
 
-   row_cnt = (lower_bits2<<(3+10+4)) | (middle_bits<<4) | lower_bits1;
+   // lower_bits2: chan 
+   // lower_bits3: bank
+   row_cnt = (lower_bits2<<(3+10+4)) | (lower_bits3<<(10+4)) | (middle_bits<<4) | lower_bits1;
 
    if (access_type <= tag_access_writemiss) 
    {
