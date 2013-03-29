@@ -58,9 +58,6 @@ struct mod_stack_t
 	enum mod_access_kind_t access_kind;
 	int *witness_ptr;
 
-	// MY CODE
-	//enum dramcache_type_t dramcache_access_kind;
-
 	struct linked_list_t *event_queue;
 	void *event_queue_item;
 	struct mod_client_info_t *client_info;

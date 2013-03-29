@@ -53,6 +53,9 @@ struct cache_block_t
 	int prefetched;
 
 	enum cache_block_state_t state;
+//-------MY CODE---------//
+
+//----END OF MY CODE-----//
 };
 
 struct cache_set_t

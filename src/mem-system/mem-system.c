@@ -352,7 +352,7 @@ struct net_t *mem_system_get_net(char *net_name)
 	return NULL;
 }
 
-// MY CODE
+//================================ MY CODE ==================================//
 //------FUNCTIONS FOR DRAM MAINMEMORY------//
 
 // read callback function
@@ -699,3 +699,4 @@ void dramcache_printstats(void)
 
    return;
 }
+//====================END OF MY CODE========================//

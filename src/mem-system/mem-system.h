@@ -53,7 +53,7 @@ void mem_system_dump_report(void);
 struct mod_t *mem_system_get_mod(char *mod_name);
 struct net_t *mem_system_get_net(char *net_name);
 
-// MY CODE
+//================== MY CODE ==================//
 void dram_read_callback(unsigned id, unsigned long long address, unsigned long long clock_cycle);
 void dram_write_callback(unsigned id, unsigned long long address, unsigned long long clock_cycle);
 
@@ -68,6 +68,6 @@ void dramcache_add_request(struct mod_t * mod, struct mod_stack_t *stack,
                            unsigned char iswrite,enum dramcache_type_t access_type);
 void dramcache_update(void);
 void dramcache_printstats(void);
-
+//============== END OF MY CODE ===============//
 #endif
 

@@ -705,7 +705,7 @@ void mod_client_info_free(struct mod_t *mod, struct mod_client_info_t *client_in
 }
 
 
-// MY CODE
+//================== MY CODE ==================//
 // 
 // insert a new node to given mod's DRAM request queue
 void mod_dram_req_insert(struct mod_t *mod, struct mod_stack_t *stack, 
@@ -1001,3 +1001,5 @@ unsigned int mod_get_dramcache_info(struct mod_t *mod, unsigned long long id, un
    //printf("mod_get_dramcache_info: finish not found\n");fflush(stdout);
    return 0;
 }
+
+//================== END OF MY CODE ==================//

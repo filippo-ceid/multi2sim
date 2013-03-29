@@ -300,9 +300,9 @@ void mod_handler_nmoesi_load(int event, void *data)
 		mem_trace("mem.end_access name=\"A-%lld\"\n",
 			stack->id);
 
-		// MY CODE
+		//================== MY CODE ==================//
 		mod_dramcache_info_free(stack->id);
-
+		//=============== END OF MY CODE ==============//
 		/* Increment witness variable */
 		if (stack->witness_ptr)
 			(*stack->witness_ptr)++;
@@ -494,9 +494,9 @@ void mod_handler_nmoesi_store(int event, void *data)
 		mem_trace("mem.end_access name=\"A-%lld\"\n",
 			stack->id);
 
-		// MY CODE
+		//================== MY CODE ==================//
 		mod_dramcache_info_free(stack->id);
-
+		//============== END OF MY CODE ===============//
 		/* Return event queue element into event queue */
 		if (stack->event_queue && stack->event_queue_item)
 			linked_list_add(stack->event_queue, stack->event_queue_item);
@@ -734,9 +734,9 @@ void mod_handler_nmoesi_nc_store(int event, void *data)
 		mem_trace("mem.end_access name=\"A-%lld\"\n",
 			stack->id);
 
-		// MY CODE
+		//================== MY CODE ==================//
 		mod_dramcache_info_free(stack->id);
-
+		//============= END OF MY CODE ================//
 		/* Increment witness variable */
 		if (stack->witness_ptr)
 			(*stack->witness_ptr)++;
@@ -946,9 +946,9 @@ void mod_handler_nmoesi_prefetch(int event, void *data)
 		mem_trace("mem.end_access name=\"A-%lld\"\n",
 			stack->id);
 
-		// MY CODE
+		//================== MY CODE ==================//
 		mod_dramcache_info_free(stack->id);
-
+		//============== END OF MY CODE ===============//
 		/* Increment witness variable */
 		if (stack->witness_ptr)
 			(*stack->witness_ptr)++;
@@ -1200,7 +1200,7 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 			return;
 		}
 
-                // MY CODE
+                //================== MY CODE ==================//
                 // DRAM cache: record hit/miss info
                 if ( (stack->mod->kind == mod_kind_cache) 
                      && (stack->mod->DRAM != NULL) )
@@ -1208,7 +1208,7 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
                    mod_insert_dramcache_info(stack->mod, stack->id, stack->hit==0 ? 0 : 1, stack->addr);
                    //return;
                 }
-
+		//=============== END OF MY CODE ==============//
 
 		/* Continue */
 		esim_schedule_event(EV_MOD_NMOESI_FIND_AND_LOCK_FINISH, stack, 0);
@@ -1843,7 +1843,7 @@ void mod_handler_nmoesi_read_request(int event, void *data)
 		 * that comes from a read request into the next cache level.
 		 * Also set the tag of the block. */
 
-                // MY CODE
+                //================== MY CODE ==================//
                 // DRAM cache: allocate new cache line
                 // event will be replied as usual. 
                 // But the cache_set_block time will be delayed
@@ -1853,6 +1853,7 @@ void mod_handler_nmoesi_read_request(int event, void *data)
                    dramcache_add_request(stack->target_mod, stack, 1, new_block_allocation);
 		}   
                 else
+		//================ END OF MY CODE ==============//
                 {
                    cache_set_block(target_mod->cache, stack->set, stack->way, stack->tag,
                            stack->shared ? cache_block_shared : cache_block_exclusive);
@@ -1951,7 +1952,7 @@ void mod_handler_nmoesi_read_request(int event, void *data)
 
 		dir_entry_unlock(dir, stack->set, stack->way);
 
-                // MY CODE
+                //================== MY CODE ==================//
                 // DRAM main memory
                 if (stack->target_mod->kind == mod_kind_dram_main_memory) 
                 {
@@ -1973,7 +1974,7 @@ void mod_handler_nmoesi_read_request(int event, void *data)
                    }
                    return;
                 }                            
-
+		//=============== END OF MY CODE ===============//
 		int latency = stack->reply == reply_ack_data_sent_to_peer ? 0 : target_mod->latency;
 		esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_REPLY, stack, latency);
 		return;
@@ -2527,7 +2528,7 @@ void mod_handler_nmoesi_write_request(int event, void *data)
 		/* Unlock, reply_size is the data of the size of the requester's block. */
 		dir_entry_unlock(target_mod->dir, stack->set, stack->way);
 
-                // MY CODE
+                //================== MY CODE ==================//
                 // DRAM main memory
                 if (stack->target_mod->kind == mod_kind_dram_main_memory) 
                 {
@@ -2551,7 +2552,7 @@ void mod_handler_nmoesi_write_request(int event, void *data)
                    }
                    return;
                 }
-
+		//=============== END OF MY CODE ===============//
 		int latency = stack->reply == reply_ack_data_sent_to_peer ? 0 : target_mod->latency;
 		esim_schedule_event(EV_MOD_NMOESI_WRITE_REQUEST_REPLY, stack, latency);
 		return;

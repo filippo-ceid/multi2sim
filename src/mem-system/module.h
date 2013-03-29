@@ -80,7 +80,7 @@ enum mod_range_kind_t
 };
 
 #define MOD_ACCESS_HASH_TABLE_SIZE  17
-// MY CODE
+//================== MY CODE ==================//
 enum dramcache_type_t
 {
       none = 0,
@@ -91,7 +91,7 @@ enum dramcache_type_t
       data_access,
       new_block_allocation
 };
-// MY CODE
+
 struct dram_req_list_t
 {
    struct mod_stack_t * stack;
@@ -110,6 +110,7 @@ struct dramcache_info_list_t
    unsigned long long id;
    unsigned int hit;
 };
+//================ END OF MY CODE ===============//
 
 /* Memory module */
 struct mod_t
@@ -172,12 +173,13 @@ struct mod_t
 	/* Cache structure */
 	struct cache_t *cache;
 
-	// MY CODE
+	//========= MY CODE =========//
 	/* DRAM */
 	void * DRAM;
 	struct dram_req_list_t * dram_pending_request_head;
 	struct dram_req_list_t * dram_pending_request_tail;
 	struct dramcache_info_list_t * dramcache_hit_info;
+	//====== END OF MY CODE =====//
 
 	/* Low and high memory modules */
 	struct linked_list_t *high_mod_list;
@@ -271,7 +273,7 @@ struct mod_t
 	long long no_retry_nc_write_hits;
 };
 
-// MY CODE
+//================== MY CODE ==================//
 void mod_dram_req_insert(struct mod_t *mod, struct mod_stack_t *stack, 
 			 unsigned int addr, unsigned char iswrite,
 			 enum dramcache_type_t access_type);
@@ -285,7 +287,7 @@ struct mod_t * mod_get_dram_mod(void);
 struct mod_t * mod_get_dramcache_mod(void);
 void mod_insert_dramcache_info(struct mod_t *mod, unsigned long long id, unsigned int hit, unsigned int addr);
 unsigned int mod_get_dramcache_info(struct mod_t *mod, unsigned long long id, unsigned int addr);
-//---------------------------------------//
+//=============== END OF MY CODE ===============//
 
 
 struct mod_t *mod_create(char *name, enum mod_kind_t kind, int num_ports,
