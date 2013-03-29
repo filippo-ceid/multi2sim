@@ -85,7 +85,9 @@ struct cache_t
 struct cache_t *cache_create(char *name, unsigned int num_sets, unsigned int block_size,
 	unsigned int assoc, enum cache_policy_t policy);
 void cache_free(struct cache_t *cache);
-
+//=========== MY CODE ==========//
+void cache_usage(struct cache_t *cache, unsigned int * unused_ptr, unsigned int * total_ptr);
+//======== END OF MY CODE ======//
 void cache_decode_address(struct cache_t *cache, unsigned int addr,
 	int *set_ptr, int *tag_ptr, unsigned int *offset_ptr);
 int cache_find_block(struct cache_t *cache, unsigned int addr, int *set_ptr, int *pway, 

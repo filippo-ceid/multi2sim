@@ -185,6 +185,35 @@ void cache_free(struct cache_t *cache)
 	free(cache);
 }
 
+//=========== MY CODE ==========//
+void cache_usage(struct cache_t *cache, unsigned int * unused_ptr, unsigned int * total_ptr)
+{
+   unsigned int set, way;
+   struct cache_block_t *block;
+
+   unsigned int unused=0;
+   unsigned int total=0;
+
+   for (set = 0; set < cache->num_sets; set++)
+   {
+	for (way = 0; way < cache->assoc; way++)
+	{
+		block = &cache->sets[set].blocks[way];
+		total++;
+
+		if (block->state == cache_block_invalid) 
+		{
+		   unused++;
+                }
+	}
+   }
+
+   (*unused_ptr) = unused;
+   (*total_ptr) = total;
+
+   return;
+}
+//======== END OF MY CODE ======//
 
 /* Return {set, tag, offset} for a given address */
 void cache_decode_address(struct cache_t *cache, unsigned int addr, int *set_ptr, int *tag_ptr, 

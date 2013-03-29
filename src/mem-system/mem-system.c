@@ -233,17 +233,27 @@ void mem_system_dump_report(void)
 	/* Report for each cache */
 	for (i = 0; i < list_count(mem_system->mod_list); i++)
 	{
+                unsigned int unused_blocks, total_blocks;
 		mod = list_get(mem_system->mod_list, i);
 		cache = mod->cache;
 		fprintf(f, "[ %s ]\n", mod->name);
 		fprintf(f, "\n");
 
 		/* Configuration */
-		if (cache) {
+		if (cache) 
+                {
 			fprintf(f, "Sets = %d\n", cache->num_sets);
 			fprintf(f, "Assoc = %d\n", cache->assoc);
 			fprintf(f, "Policy = %s\n", str_map_value(&cache_policy_map, cache->policy));
-		}
+
+                        //====== MY CODE =======//
+                        cache_usage(cache, &unused_blocks, &total_blocks);
+                        fprintf(f, "Total Blocks = %d\n", total_blocks);
+                        fprintf(f, "Unused Blocks = %d\n", unused_blocks);
+                        fprintf(f, "Unused Ratio = %.4g\n", total_blocks ?
+			(double) unused_blocks / total_blocks : 0.0);
+                        //=== END OF MY CODE ===//
+                }
 		fprintf(f, "BlockSize = %d\n", mod->block_size);
 		fprintf(f, "Latency = %d\n", mod->latency);
 		fprintf(f, "Ports = %d\n", mod->num_ports);
