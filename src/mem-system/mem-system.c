@@ -233,7 +233,7 @@ void mem_system_dump_report(void)
 	/* Report for each cache */
 	for (i = 0; i < list_count(mem_system->mod_list); i++)
 	{
-                unsigned int unused_blocks, total_blocks;
+                unsigned int unused_blocks, doa_blocks, total_blocks;
 		mod = list_get(mem_system->mod_list, i);
 		cache = mod->cache;
 		fprintf(f, "[ %s ]\n", mod->name);
@@ -244,14 +244,36 @@ void mem_system_dump_report(void)
                 {
 			fprintf(f, "Sets = %d\n", cache->num_sets);
 			fprintf(f, "Assoc = %d\n", cache->assoc);
-			fprintf(f, "Policy = %s\n", str_map_value(&cache_policy_map, cache->policy));
+			fprintf(f, "Policy = %s\n\n", str_map_value(&cache_policy_map, cache->policy));
 
                         //====== MY CODE =======//
-                        cache_usage(cache, &unused_blocks, &total_blocks);
+                        cache_usage(cache, &unused_blocks, &doa_blocks, &total_blocks);
                         fprintf(f, "Total Blocks = %d\n", total_blocks);
                         fprintf(f, "Unused Blocks = %d\n", unused_blocks);
                         fprintf(f, "Unused Ratio = %.4g\n", total_blocks ?
-			(double) unused_blocks / total_blocks : 0.0);
+                                (double) unused_blocks / total_blocks : 0.0);
+                        fprintf(f, "DoA Blocks = %d\n", doa_blocks);
+                        fprintf(f, "DoA Ratio = %.4g\n\n", total_blocks ?
+                                (double) doa_blocks / total_blocks : 0.0);
+                        
+                        if ((mod->DRAM)&&(mod->kind == mod_kind_cache)) 
+                        {
+                           long long total_request;
+                           long long tag_request;
+                           tag_request = mod->dramcache_request_tag_access_readhit + mod->dramcache_request_tag_access_writehit
+                                    + mod->dramcache_request_tag_access_readmiss + mod->dramcache_request_tag_access_writemiss;
+                           total_request = tag_request + mod->dramcache_request_data_access + mod->dramcache_request_new_block_allocation;
+
+                           fprintf(f, "DRAMCache Requests = %lld\n", total_request);
+                           fprintf(f, "DRAMCache Tag Requests = %lld\n", tag_request);
+                           fprintf(f, "DRAMCache Data Requests = %lld\n", mod->dramcache_request_data_access);
+                           fprintf(f, "DRAMCache NewBlock Allocation = %lld\n", mod->dramcache_request_new_block_allocation);
+                           fprintf(f, "DRAMCache Tag Requests (ReadHit) = %lld\n", mod->dramcache_request_tag_access_readhit);
+                           fprintf(f, "DRAMCache Tag Requests (WriteHit) = %lld\n", mod->dramcache_request_tag_access_writehit);
+                           fprintf(f, "DRAMCache Tag Requests (ReadMiss) = %lld\n", mod->dramcache_request_tag_access_readmiss);
+                           fprintf(f, "DRAMCache Tag Requests (WriteMiss) = %lld\n\n", mod->dramcache_request_tag_access_writemiss);
+                           
+                        }
                         //=== END OF MY CODE ===//
                 }
 		fprintf(f, "BlockSize = %d\n", mod->block_size);
@@ -259,17 +281,25 @@ void mem_system_dump_report(void)
 		fprintf(f, "Ports = %d\n", mod->num_ports);
 		fprintf(f, "\n");
 
+                if (mod->kind == mod_kind_dram_main_memory) 
+                {
+                   fprintf(f, "DRAM Read Requests = %lld\n", mod->dram_request_read);
+                   fprintf(f, "DRAM Write Requests = %lld\n\n", mod->dram_request_write);
+                }
+
 		/* Statistics */
 		fprintf(f, "Accesses = %lld\n", mod->accesses);
 		fprintf(f, "Hits = %lld\n", mod->hits);
 		fprintf(f, "Misses = %lld\n", mod->accesses - mod->hits);
-		fprintf(f, "HitRatio = %.4g\n", mod->accesses ?
+		fprintf(f, "HitRatio = %.4g\n\n", mod->accesses ?
 			(double) mod->hits / mod->accesses : 0.0);
+
 		fprintf(f, "Evictions = %lld\n", mod->evictions);
                 fprintf(f, "DoA Evictions = %lld\n", mod->doa_evictions);//===== MY CODE =====//
-                fprintf(f, "DoA Ratio = %.4g\n", mod->evictions ? 
+                fprintf(f, "DoA Ratio = %.4g\n\n", mod->evictions ? 
                         (double) mod->doa_evictions/mod->evictions : 0.0);//===== MY CODE =====//
-		fprintf(f, "Retries = %lld\n", mod->read_retries + mod->write_retries + 
+
+                fprintf(f, "Retries = %lld\n", mod->read_retries + mod->write_retries + 
 			mod->nc_write_retries);
 		fprintf(f, "\n");
 		fprintf(f, "Reads = %lld\n", mod->reads);
@@ -407,6 +437,18 @@ void dram_add_request(struct mod_t * dram_mod, struct mod_stack_t *stack, unsign
    // send the request to DRAMSim2
    memory_addtransaction(dram_mod->DRAM, iswrite, stack->addr);
 
+   // statistics
+
+   if (iswrite) 
+   {
+      dram_mod->dram_request_write++;
+   }
+   else
+   {
+      dram_mod->dram_request_read++;
+   }
+
+   return;
 }
 
 // DRAM update
@@ -691,6 +733,32 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
    mod_dram_req_insert(dramcache_mod,stack,new_addr,iswrite, access_type);
    // send the request to DRAMSim2
    memory_addtransaction(dramcache_mod->DRAM, iswrite, new_addr);
+
+   // statistics
+   if (access_type == tag_access_readhit) 
+   {
+      (dramcache_mod->dramcache_request_tag_access_readhit)++;
+   }
+   else if (access_type == tag_access_writehit)
+   {
+      (dramcache_mod->dramcache_request_tag_access_writehit)++;
+   }
+   else if (access_type == tag_access_readmiss)
+   {
+      (dramcache_mod->dramcache_request_tag_access_readmiss)++;
+   }
+   else if (access_type == tag_access_writemiss)
+   {
+      (dramcache_mod->dramcache_request_tag_access_writemiss)++;
+   }
+   else if (access_type == data_access)
+   {
+      (dramcache_mod->dramcache_request_data_access)++;
+   }
+   else if (access_type == new_block_allocation)
+   {
+      (dramcache_mod->dramcache_request_new_block_allocation)++;
+   }
 
    // debug info
    if (iswrite) 

@@ -179,8 +179,21 @@ struct mod_t
 	struct dram_req_list_t * dram_pending_request_head;
 	struct dram_req_list_t * dram_pending_request_tail;
 	struct dramcache_info_list_t * dramcache_hit_info;
-
+	/* MY Statistics */
 	long long doa_evictions;
+
+	// for dramcache
+	long long dramcache_request_tag_access_readhit;
+	long long dramcache_request_tag_access_writehit;
+	long long dramcache_request_tag_access_readmiss;
+	long long dramcache_request_tag_access_writemiss;
+	long long dramcache_request_data_access;
+	long long dramcache_request_new_block_allocation;
+
+	// for off-chip dram
+	long long dram_request_write;
+	long long dram_request_read;
+
 	//====== END OF MY CODE =====//
 
 	/* Low and high memory modules */

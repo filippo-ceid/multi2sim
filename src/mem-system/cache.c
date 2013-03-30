@@ -186,12 +186,13 @@ void cache_free(struct cache_t *cache)
 }
 
 //=========== MY CODE ==========//
-void cache_usage(struct cache_t *cache, unsigned int * unused_ptr, unsigned int * total_ptr)
+void cache_usage(struct cache_t *cache, unsigned int * unused_ptr, unsigned int * doa_ptr, unsigned int * total_ptr)
 {
    unsigned int set, way;
    struct cache_block_t *block;
 
    unsigned int unused=0;
+   unsigned int doa=0;
    unsigned int total=0;
 
    for (set = 0; set < cache->num_sets; set++)
@@ -205,10 +206,15 @@ void cache_usage(struct cache_t *cache, unsigned int * unused_ptr, unsigned int 
 		{
 		   unused++;
                 }
+                else if (block->hasHit == 0) 
+		{
+		   doa++;
+                }
 	}
    }
 
    (*unused_ptr) = unused;
+   (*doa_ptr) = doa;
    (*total_ptr) = total;
 
    return;
