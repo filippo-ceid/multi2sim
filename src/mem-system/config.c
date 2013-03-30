@@ -552,9 +552,9 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
 	if (num_sets < 1 || (num_sets & (num_sets - 1)))
 		fatal("%s: cache %s: number of sets must be a power of two greater than 1.\n%s",
 			mem_config_file_name, mod_name, err_mem_config_note);
-	if (assoc < 1 || (assoc & (assoc - 1)))
-		fatal("%s: cache %s: associativity must be power of two and > 1.\n%s",
-			mem_config_file_name, mod_name, err_mem_config_note);
+	//if (assoc < 1 || (assoc & (assoc - 1)))
+	//	fatal("%s: cache %s: associativity must be power of two and > 1.\n%s",
+	//		mem_config_file_name, mod_name, err_mem_config_note);
 	if (block_size < 4 || (block_size & (block_size - 1)))
 		fatal("%s: cache %s: block size must be power of two and at least 4.\n%s",
 			mem_config_file_name, mod_name, err_mem_config_note);

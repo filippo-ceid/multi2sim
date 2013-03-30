@@ -2572,9 +2572,8 @@ void mod_handler_nmoesi_write_request(int event, void *data)
                 {
                    if ( mod_get_dramcache_info(stack->target_mod, stack->id, stack->addr) ) 
                    {
-                      //printf("flag\n");fflush(stdout);
                       dramcache_add_request(stack->target_mod, stack, 0, tag_access_writehit);
-                      dramcache_add_request(stack->target_mod, stack, 1, data_access);
+                      //dramcache_add_request(stack->target_mod, stack, 1, data_access);
                    }
                    else
                    {

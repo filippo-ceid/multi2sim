@@ -25,7 +25,7 @@
 #include <lib/util/list.h>
 #include <lib/util/string.h>
 #include <network/network.h>
-
+#include <assert.h>
 #include "cache.h"
 #include "command.h"
 #include "config.h"
@@ -452,12 +452,15 @@ void dramcache_read_callback(unsigned id, unsigned long long address, unsigned l
    struct mod_t * dramcache_mod;
    enum dramcache_type_t access_type;
 
+   unsigned int cache_assoc;
+
    dramcache_mod = mod_get_dramcache_mod();
    // get the access type
    access_type = mod_dram_req_type(dramcache_mod,address,0);
    // get the stack pointer and remove the request from queue
    stack = mod_dram_req_remove(dramcache_mod,address,0);
 
+   cache_assoc = dramcache_mod->cache->assoc;
 
    // Add reply event
    if (access_type == tag_access_writehit)
@@ -469,6 +472,14 @@ void dramcache_read_callback(unsigned id, unsigned long long address, unsigned l
                 stack->tag, 
                 dramcache_mod->name,
                 address);
+      if (cache_assoc == 1)  // alloy cache
+      {
+         esim_schedule_event(EV_MOD_NMOESI_WRITE_REQUEST_REPLY, stack, 0);
+      }
+      else if (cache_assoc == 29) // gabriel's method
+      {
+         dramcache_add_request(dramcache_mod, stack, 1, data_access);
+      }
    }
    else if (access_type == tag_access_readhit)
    {
@@ -478,7 +489,14 @@ void dramcache_read_callback(unsigned id, unsigned long long address, unsigned l
                 stack->tag, 
                 dramcache_mod->name,
                 address);
-      esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_REPLY, stack, 0);
+      if (cache_assoc == 1) // alloy cache
+      {
+         esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_REPLY, stack, 0);
+      }
+      else if (cache_assoc == 29) // gabriel's method
+      {
+         dramcache_add_request(dramcache_mod, stack, 0, data_access);
+      }
    }
    else if (access_type == tag_access_readmiss)
    {
@@ -568,22 +586,43 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
                            unsigned char iswrite,
                            enum dramcache_type_t access_type)
 {
-   unsigned int set_num=0;
+   unsigned int block_num=0;
    unsigned int row_cnt=0;
    unsigned int col_cnt=0;
    unsigned int new_addr=0;
    unsigned int lower_bits1=0, lower_bits2=0, lower_bits3=0;
    unsigned int middle_bits=0;
 
-   // Direct-mapped cache, 64bytes cache line size
-   set_num = ((stack->addr) >> 6) % (4*128*1024*28); // assume 1GB cache size
+   // Get cache info
+   unsigned int cache_sets = dramcache_mod->cache->num_sets;
+   unsigned int cache_assoc = dramcache_mod->cache->assoc;
 
-   // address remapping for alloy-cache
-   // TAD-72B: tag-8B data-64B 
-   // 2KB row buffer: 28 TADs per row (32 bytes unused)
+   assert(cache_assoc);
 
-   row_cnt = set_num/28;
-   col_cnt = set_num%28;
+   if (cache_assoc == 1) 
+   {
+      // direct-mapped cache, 64bytes cache line size
+      block_num = (stack->set) % (4*128*1024*28); // assume 1GB cache size
+
+      // address remapping for alloy-cache
+      // TAD-72B: tag-8B data-64B 
+      // 2KB row buffer: 28 TADs per row (32 bytes unused)
+
+      row_cnt = block_num/28;
+      col_cnt = block_num%28;
+   }
+   else if (cache_assoc == 29)
+   {
+      // set-associative cache
+      // 2KB row buffer 
+      // 29 tags stored in first 3 data blocks 
+      // 29 cache data blocks
+
+      row_cnt = stack->set;
+      col_cnt = stack->way;
+   }
+   else
+      assert(0);
 
    // DRAMSim2 setting: 
    // ADDRESS_MAPPING_SCHEME=schemex
@@ -610,21 +649,43 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
    // lower_bits3: bank
    row_cnt = (lower_bits2<<(3+10+4)) | (lower_bits3<<(10+4)) | (middle_bits<<4) | lower_bits1;
 
-   if (access_type <= tag_access_writemiss) 
+
+   if (cache_assoc == 1) 
    {
-      new_addr = (row_cnt<<11)+(col_cnt*72);
+
+      if (access_type <= tag_access_writemiss) 
+      {
+         new_addr = (row_cnt<<11)+(col_cnt*72);
+      }
+      else if (access_type == data_access) 
+      {
+         // for alloy cache, data is already fetched by tag access.
+         // so this only happens for stores.
+         new_addr = (row_cnt<<11)+(col_cnt*72);
+      }
+      else if (access_type == new_block_allocation)
+      {
+         new_addr = (row_cnt<<11)+(col_cnt*72);
+         
+      }  
    }
-   else if (access_type == data_access) 
+   else if (cache_assoc == 29) 
    {
-      // for alloy cache, data is already fetched by tag access.
-      // so this only happens for stores.
-      new_addr = (row_cnt<<11)+(col_cnt*72);
+      if (access_type <= tag_access_writemiss) 
+      {
+         new_addr = (row_cnt<<11);
+      }
+      else if (access_type == data_access) 
+      {
+         // for alloy cache, data is already fetched by tag access.
+         // so this only happens for stores.
+         new_addr = (row_cnt<<11) + ((col_cnt+3)*64);
+      }
+      else if (access_type == new_block_allocation)
+      {
+         new_addr = (row_cnt<<11)+((col_cnt+3)*64);
+      }  
    }
-   else if (access_type == new_block_allocation)
-   {
-      new_addr = (row_cnt<<11)+(col_cnt*72);
-      
-   }  
 
    // add request to the global queue
    mod_dram_req_insert(dramcache_mod,stack,new_addr,iswrite, access_type);
