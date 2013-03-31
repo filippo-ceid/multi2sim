@@ -1535,11 +1535,7 @@ void m2s_loop(void)
 			dram_update();
 			dramcache_update();
 
-                        if (esim_finish) 
-			{
-			   dram_printstats();
-			   dramcache_printstats();
-                        }
+                        
 		}
 		//============= END OF MY CODE ===========//
 
@@ -1560,7 +1556,11 @@ void m2s_loop(void)
 			&& esim_real_time() > m2s_max_time * 1000000)
 			esim_finish = esim_finish_max_time;
 	}
-
+	if (esim_finish) 
+	{
+	       dram_printstats();
+	       dramcache_printstats();
+        }
 }
 
 
