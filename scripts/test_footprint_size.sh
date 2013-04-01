@@ -2,7 +2,7 @@
 
 # Need to install valgrind
 
-EXE_CMD="./mcf_base.i386 inp.in"
+EXE_CMD="./mcf_base.i386 inp.in" #!!CHANGE ME!!
 
 valgrind --tool=massif --pages-as-heap=yes --massif-out-file=massif.out $EXE_CMD
 echo "The Peak Memory usage: "
