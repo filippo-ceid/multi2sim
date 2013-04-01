@@ -1,0 +1,4 @@
+[ General ]
+Cores = 1
+Threads = 1
+FastForward = 0

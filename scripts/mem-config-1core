@@ -1,0 +1,80 @@
+[CacheGeometry geo-l1]
+Sets = 128
+Assoc = 4
+BlockSize = 64
+Latency = 4 
+Policy = LRU
+Ports = 2
+
+[CacheGeometry geo-l2]
+Sets = 1024
+Assoc = 16
+BlockSize = 64
+Latency = 24
+Policy = LRU
+Ports = 16
+
+[CacheGeometry geo-dramcache]
+Sets = 2097152
+Assoc = 1
+BlockSize = 64
+Latency = 24
+Policy = LRU
+Ports = 16
+
+[Module mod-l1-0]
+Type = Cache
+Geometry = geo-l1
+LowNetwork = net-l1-l2 
+LowModules = mod-l2
+
+[Module mod-l2]
+Type = Cache
+Geometry = geo-l2
+HighNetwork = net-l1-l2
+LowNetwork = net-l2-l3
+LowModules = mod-dramcache
+
+[Module mod-dramcache]
+Type = Cache
+CacheType = DRAM
+INIDir = /home/ray/WORK/multi2sim/multi2sim-4.0.1/ini
+DRAMINI = dramcache_128MB.ini
+SystemINI = sys_dramcache.ini
+CPUClock = 3000000000
+DRAMSize = 32
+Geometry = geo-dramcache
+HighNetwork = net-l2-l3
+LowNetwork = net-l3-mm
+LowModules = mod-mm
+
+[Module mod-mm]
+Type = MainMemory
+BlockSize = 64
+Latency = 200
+DirectorySize = 2097152
+HighNetwork = net-l3-mm
+
+[Network net-l3-mm]
+DefaultInputBufferSize = 8192
+DefaultOutputBufferSize = 8192
+DefaultBandwidth = 4096 
+
+[Network net-l2-l3]
+DefaultInputBufferSize = 8192
+DefaultOutputBufferSize = 8192
+DefaultBandwidth = 4096
+
+[Network net-l1-l2]
+DefaultInputBufferSize = 8192 
+DefaultOutputBufferSize = 8192
+DefaultBandwidth = 4096
+
+[Entry core-0]
+Arch = x86
+Core = 0
+Thread = 0
+DataModule = mod-l1-0
+InstModule = mod-l1-0
+
+

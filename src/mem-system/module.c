@@ -86,6 +86,9 @@ void mod_free(struct mod_t *mod)
 {
 	linked_list_free(mod->low_mod_list);
 	linked_list_free(mod->high_mod_list);
+        //======= MY CODE =======//
+        mod_dram_free(mod);
+        //==== END OF MY CODE ===//
 	if (mod->cache)
 		cache_free(mod->cache);
 	if (mod->dir)
@@ -706,7 +709,44 @@ void mod_client_info_free(struct mod_t *mod, struct mod_client_info_t *client_in
 
 
 //================== MY CODE ==================//
-// 
+
+void mod_dram_free(struct mod_t* mod)
+{
+   if (mod==NULL) 
+   {
+      return;
+   }
+
+   if (mod->dramcache_hit_info != NULL) 
+   {
+      struct dramcache_info_list_t * ptr = mod->dramcache_hit_info;
+      struct dramcache_info_list_t * prev_ptr = NULL;
+      while (ptr) 
+      {
+         prev_ptr = ptr;
+         ptr = ptr->next;
+         free(prev_ptr);
+      }
+      mod->dramcache_hit_info = NULL;
+   }
+
+   if (mod->dram_pending_request_head != NULL) 
+   {
+      struct dram_req_list_t * ptr, * pre_ptr;
+      ptr = mod->dram_pending_request_head;
+      pre_ptr = NULL;
+      while (ptr) 
+      {
+         pre_ptr = ptr;
+         ptr = ptr->next;
+         free(pre_ptr);
+      }
+      mod->dram_pending_request_head = NULL;
+      mod->dram_pending_request_tail = NULL;
+   }
+
+}
+
 // insert a new node to given mod's DRAM request queue
 void mod_dram_req_insert(struct mod_t *mod, struct mod_stack_t *stack, 
                          unsigned int addr, unsigned char iswrite,

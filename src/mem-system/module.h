@@ -289,6 +289,7 @@ struct mod_t
 };
 
 //================== MY CODE ==================//
+void mod_dram_free(struct mod_t *mod);
 void mod_dram_req_insert(struct mod_t *mod, struct mod_stack_t *stack, 
 			 unsigned int addr, unsigned char iswrite,
 			 enum dramcache_type_t access_type);
