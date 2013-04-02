@@ -769,23 +769,23 @@ void mod_dram_req_insert(struct mod_t *mod, struct mod_stack_t *stack,
    // for new_block_allocation, the original event stack will be 
    // replied and freed before the actual block allocation time. 
    // Need to create a new one to keep set/way/tag data.
-   if (access_type == new_block_allocation) 
-   {
+   //if (access_type == new_block_allocation) 
+   //{
       /* Initialize */
-	new_node->stack = xcalloc(1, sizeof(struct mod_stack_t));
-	new_node->stack->id = stack->id;
-	new_node->stack->mod = stack->mod;
-	new_node->stack->addr = stack->addr;
-	new_node->stack->ret_event = stack->ret_event;
-	new_node->stack->ret_stack = stack->ret_stack;
-	if (stack->ret_stack != NULL)
-		new_node->stack->client_info = stack->client_info;
-	new_node->stack->way = stack->way;
-	new_node->stack->set = stack->set;
-	new_node->stack->tag = stack->tag;
-        new_node->stack->target_mod = stack->target_mod;
-        new_node->stack->shared = stack->shared;
-   }
+	//new_node->stack = xcalloc(1, sizeof(struct mod_stack_t));
+	//new_node->stack->id = stack->id;
+	//new_node->stack->mod = stack->mod;
+	//new_node->stack->addr = stack->addr;
+	//new_node->stack->ret_event = stack->ret_event;
+	//new_node->stack->ret_stack = stack->ret_stack;
+	//if (stack->ret_stack != NULL)
+	//	new_node->stack->client_info = stack->client_info;
+	//new_node->stack->way = stack->way;
+	//new_node->stack->set = stack->set;
+	//new_node->stack->tag = stack->tag;
+        //new_node->stack->target_mod = stack->target_mod;
+        //new_node->stack->shared = stack->shared;
+   //}
 
 
    if (mod->dram_pending_request_head == NULL) 

@@ -615,10 +615,10 @@ void dramcache_write_callback(unsigned id, unsigned long long address, unsigned 
                 stack->tag, 
                 dramcache_mod->name,
                 address);
-      cache_set_block(stack->target_mod->cache, stack->set, stack->way, stack->tag,
-			stack->shared ? cache_block_shared : cache_block_exclusive);
+      //cache_set_block(stack->target_mod->cache, stack->set, stack->way, stack->tag,
+      //          stack->shared ? cache_block_shared : cache_block_exclusive);
 
-      free(stack);
+      //free(stack);
    }
    return;
 }
@@ -638,13 +638,63 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
    // Get cache info
    unsigned int cache_sets = dramcache_mod->cache->num_sets;
    unsigned int cache_assoc = dramcache_mod->cache->assoc;
+   unsigned int row_bits = 0;
+   
+   if (cache_assoc == 1) // Moin's Method
+   {
+      if (cache_sets == 2097152) //128MB dram cache 
+      {
+         row_bits = 7;
+      }
+      else if (cache_sets == 4194304) // 256MB dram cache
+      {
+         row_bits = 8;
+      }
+      else if (cache_sets == 8388608) // 512MB dram cache
+      {
+         row_bits = 9;
+      }
+      else if (cache_sets == 16777216) // 1GB dram cache
+      {
+         row_bits = 10;
+      }
+      else
+      {
+         fatal("Wrong Cache Set Number: %d\n",cache_sets);
+      }
+   }
+   else if (cache_assoc == 29) // Gabriel's Method
+   {
+      if (cache_sets == 65536) //128MB dram cache 
+      {
+         row_bits = 7;
+      }
+      else if (cache_sets == 131072) // 256MB dram cache
+      {
+         row_bits = 8;
+      }
+      else if (cache_sets == 262144) // 512MB dram cache
+      {
+         row_bits = 9;
+      }
+      else if (cache_sets == 524288) // 1GB dram cache
+      {
+         row_bits = 10;
+      }
+      else
+      {
+         fatal("Wrong Cache Set Number: %d\n",cache_sets);
+      }
+   }
+   else
+   {
+      fatal("Wrong Cache Assoc Number: %d\n",cache_assoc);
+   }
 
-   assert(cache_assoc);
-
-   if (cache_assoc == 1) 
+   if (cache_assoc == 1) // Moin's Method
    {
       // direct-mapped cache, 64bytes cache line size
-      block_num = (stack->set) % (4*128*1024*28); // assume 1GB cache size
+      block_num = (stack->set) % (4*128*(1<<row_bits)*28); 
 
       // address remapping for alloy-cache
       // TAD-72B: tag-8B data-64B 
@@ -653,7 +703,7 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
       row_cnt = block_num/28;
       col_cnt = block_num%28;
    }
-   else if (cache_assoc == 29)
+   else if (cache_assoc == 29) // Gabriel's Method
    {
       // set-associative cache
       // 2KB row buffer 
@@ -664,7 +714,7 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
       col_cnt = stack->way;
    }
    else
-      assert(0);
+      fatal("Wrong Cache Assoc Number: %d\n",cache_assoc);
 
    // DRAMSim2 setting: 
    // ADDRESS_MAPPING_SCHEME=schemex
@@ -674,13 +724,13 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
    // -------------------------
    // 4 channels: 2 bits
    // 8 banks:    3 bits
-   // 1024 rows:  10 bits
+   // 1024/512/256/128 rows:  10/9/8/7 bits
    // 1 rank:     0 bit
    // 2048 cols:  11 bits
    // BUS 128 bits/16 bytes: 4 bits
    // -------------------------
-   //  chan  :  rank :  bank  :    row  :   col   : bus offset
-   // 2 bits : 0 bit : 3 bits : 10 bits : 11 bits : 4 bits
+   //  chan  :  rank :  bank  :    row        :   col   : bus offset
+   // 2 bits : 0 bit : 3 bits : 10/9/8/7 bits : 11 bits : 4 bits
 
    lower_bits1 = row_cnt & ( (1<<4) - 1); // 4 bits [3:0]
    lower_bits2 = (row_cnt>>4) & ( (1<<2) - 1); // 2 bits [5:4]
@@ -689,7 +739,7 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
 
    // lower_bits2: chan 
    // lower_bits3: bank
-   row_cnt = (lower_bits2<<(3+10+4)) | (lower_bits3<<(10+4)) | (middle_bits<<4) | lower_bits1;
+   row_cnt = (lower_bits2<<(3+row_bits+4)) | (lower_bits3<<(row_bits+4)) | (middle_bits<<4) | lower_bits1;
 
 
    if (cache_assoc == 1) 

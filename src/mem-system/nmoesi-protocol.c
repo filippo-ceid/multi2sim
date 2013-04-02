@@ -1882,12 +1882,9 @@ void mod_handler_nmoesi_read_request(int event, void *data)
                 {
                    dramcache_add_request(stack->target_mod, stack, 1, new_block_allocation);
 		}   
-                else
 		//================ END OF MY CODE ==============//
-                {
-                   cache_set_block(target_mod->cache, stack->set, stack->way, stack->tag,
+                cache_set_block(target_mod->cache, stack->set, stack->way, stack->tag,
                            stack->shared ? cache_block_shared : cache_block_exclusive);
-                }
 
 		esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_UPDOWN_FINISH, stack, 0);
 		return;
