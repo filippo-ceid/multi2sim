@@ -37,6 +37,7 @@ struct linked_list_elem_t
 	struct linked_list_elem_t *prev;
 	struct linked_list_elem_t *next;
 	void *data;
+	long long cycle; // MY CODE
 };
 
 
@@ -314,6 +315,9 @@ void linked_list_insert(struct linked_list_t *list, void *data);
  */
 void linked_list_add(struct linked_list_t *list, void *data);
 
+//========= MY CODE =========//
+void linked_list_add_new(struct linked_list_t *list, void *data, long long cycle);
+//====== END OF MY CODE =====//
 
 /** Remove the current element from the list.
  *

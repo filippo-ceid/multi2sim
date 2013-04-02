@@ -277,6 +277,15 @@ void linked_list_add(struct linked_list_t *list, void *data)
 	linked_list_out(list);
 }
 
+//========= MY CODE =========//
+void linked_list_add_new(struct linked_list_t *list, void *data, long long cycle)
+{
+	linked_list_out(list);
+	linked_list_insert(list, data);
+	list->current->cycle = cycle;
+	linked_list_out(list);
+}
+//====== END OF MY CODE =====//
 
 void linked_list_remove(struct linked_list_t *list)
 {

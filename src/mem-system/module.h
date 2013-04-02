@@ -110,6 +110,7 @@ struct dramcache_info_list_t
    unsigned long long id;
    unsigned int hit;
 };
+
 //================ END OF MY CODE ===============//
 
 /* Memory module */
@@ -179,6 +180,10 @@ struct mod_t
 	struct dram_req_list_t * dram_pending_request_head;
 	struct dram_req_list_t * dram_pending_request_tail;
 	struct dramcache_info_list_t * dramcache_hit_info;
+
+	struct linked_list_t * dramcache_victim_list;
+	long long dramcache_hit_victim;
+	long long dramcache_victim_reference_interval;
 	/* MY Statistics */
 	long long doa_evictions;
 

@@ -87,7 +87,7 @@ void mod_free(struct mod_t *mod)
 	linked_list_free(mod->low_mod_list);
 	linked_list_free(mod->high_mod_list);
         //======= MY CODE =======//
-        mod_dram_free(mod);
+        //mod_dram_free(mod);
         //==== END OF MY CODE ===//
 	if (mod->cache)
 		cache_free(mod->cache);

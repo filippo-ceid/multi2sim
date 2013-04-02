@@ -1164,6 +1164,7 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 				str_map_value(&cache_block_state_map, stack->state));
 
 			//========== MY CODE =========//
+			// Record DoA related statistics
                         if (stack->state) 
 			{
                            if (mod->cache->sets[stack->set].blocks[stack->way].hasHit) 
@@ -1176,6 +1177,17 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 			{
 			   stack->victimHasHit = 0;
 			   mod->cache->sets[stack->set].blocks[stack->way].hasHit = 0;
+			}
+
+			// VICTIM CACHE for DRAM Cache
+			if ( (mod->kind == mod_kind_cache) 
+				    && (mod->DRAM != NULL) )
+			{
+			   if (stack->state)
+			   {
+			      dramcache_addVictim(mod->cache->sets[stack->set].blocks[stack->way].tag);
+			      dramcache_hitVictim(stack->tag);
+			   }
 			}
 			//====== END OF MY CODE ======//
 		}

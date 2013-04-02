@@ -183,6 +183,8 @@ void mem_system_done(void)
 	/* Dump report */
 	mem_system_dump_report();
 
+        dram_free(); // MY CODE
+
 	/* Free memory modules */
 	while (list_count(mem_system->mod_list))
 		mod_free(list_pop(mem_system->mod_list));
@@ -273,6 +275,7 @@ void mem_system_dump_report(void)
                            fprintf(f, "DRAMCache Tag Requests (ReadMiss) = %lld\n", mod->dramcache_request_tag_access_readmiss);
                            fprintf(f, "DRAMCache Tag Requests (WriteMiss) = %lld\n\n", mod->dramcache_request_tag_access_writemiss);
                            
+                           dramcache_victim_printstats(f);
                         }
                         //=== END OF MY CODE ===//
                 }
@@ -894,4 +897,128 @@ void dramcache_printstats(void)
 
    return;
 }
+
+// Victim cache for DRAM Cache
+void dramcache_addVictim(unsigned int addr)
+{
+   struct mod_t * dramcache_mod = mod_get_dramcache_mod();
+
+   if (dramcache_mod == NULL) 
+   {
+      return;
+   }
+   if (dramcache_mod->dramcache_victim_list == NULL) 
+   {
+      return;
+   }
+
+   linked_list_add_new(dramcache_mod->dramcache_victim_list, (void*)addr, esim_cycle);
+}
+
+unsigned char dramcache_hitVictim(unsigned int addr)
+{
+   struct mod_t * dramcache_mod = mod_get_dramcache_mod();
+
+   if (dramcache_mod == NULL) 
+   {
+      return 0;
+   }
+   if (dramcache_mod->dramcache_victim_list == NULL) 
+   {
+      return 0;
+   }
+
+   linked_list_find(dramcache_mod->dramcache_victim_list, (void *)addr);
+
+   if ((dramcache_mod->dramcache_victim_list->error_code) != LINKED_LIST_ERR_OK) // miss victim list
+   {
+      return 0;
+   }
+
+   // hit victim list
+   (dramcache_mod->dramcache_hit_victim)++;
+   (dramcache_mod->dramcache_victim_reference_interval) += esim_cycle 
+                  - dramcache_mod->dramcache_victim_list->current->cycle;
+
+   linked_list_remove(dramcache_mod->dramcache_victim_list);
+   return 1;
+}
+
+void dramcache_victim_printstats(FILE * f)
+{
+   struct mod_t * dramcache_mod = mod_get_dramcache_mod();
+   if (dramcache_mod == NULL) 
+   {
+      return;
+   }
+   fprintf(f, "DRAMCache Victim Hits = %lld\n", dramcache_mod->dramcache_hit_victim);
+   if (dramcache_mod->dramcache_hit_victim) 
+   {
+      fprintf(f, "DRAMCache Victim Average Reference Invertal = %.4g\n\n", 
+             (double)dramcache_mod->dramcache_victim_reference_interval /dramcache_mod->dramcache_hit_victim);
+   }
+   else
+   {
+      fprintf(f, "DRAMCache Victim Average Reference Invertal = 0.0\n\n");
+   }
+}
+
+void dram_free(void)
+{
+   struct mod_t * dram_mod = mod_get_dram_mod();
+   struct mod_t * dramcache_mod = mod_get_dramcache_mod();
+
+   if (dram_mod) 
+   {
+      struct dram_req_list_t * req_ptr = dram_mod->dram_pending_request_head;
+      struct dram_req_list_t * req_next = NULL;
+
+      struct dramcache_info_list_t * info_ptr = dram_mod->dramcache_hit_info;
+      struct dramcache_info_list_t * info_next = NULL;
+
+      while (req_ptr) 
+      {
+         req_next = req_ptr->next;
+         free(req_ptr);
+         req_ptr = req_next;
+      }
+      while (info_ptr) 
+      {
+         info_next = info_ptr->next;
+         free(info_ptr);
+         info_ptr = info_next;
+      }
+   }
+
+   if (dramcache_mod) 
+   {
+      struct dram_req_list_t * req_ptr = dramcache_mod->dram_pending_request_head;
+      struct dram_req_list_t * req_next = NULL;
+
+      struct dramcache_info_list_t * info_ptr = dramcache_mod->dramcache_hit_info;
+      struct dramcache_info_list_t * info_next = NULL;
+
+
+      while (req_ptr) 
+      {
+         req_next = req_ptr->next;
+         free(req_ptr);
+         req_ptr = req_next;
+      }
+      while (info_ptr) 
+      {
+         info_next = info_ptr->next;
+         free(info_ptr);
+         info_ptr = info_next;
+      }
+
+      if (dramcache_mod->dramcache_victim_list == NULL) 
+      {
+         return;
+      }
+      linked_list_clear(dramcache_mod->dramcache_victim_list);
+   }
+
+}
+
 //====================END OF MY CODE========================//

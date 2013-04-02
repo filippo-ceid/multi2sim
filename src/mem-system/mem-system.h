@@ -21,6 +21,7 @@
 #define MEM_SYSTEM_H
 
 #include "mod-stack.h"
+#include <lib/util/linked-list.h>
 
 extern char *mem_report_file_name;
 
@@ -68,6 +69,12 @@ void dramcache_add_request(struct mod_t * mod, struct mod_stack_t *stack,
                            unsigned char iswrite,enum dramcache_type_t access_type);
 void dramcache_update(void);
 void dramcache_printstats(void);
+
+void dramcache_addVictim(unsigned int addr);
+unsigned char dramcache_hitVictim(unsigned int addr);
+void dramcache_victim_printstats(FILE * f);
+
+void dram_free(void);
 //============== END OF MY CODE ===============//
 #endif
 

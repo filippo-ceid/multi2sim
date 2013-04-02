@@ -622,12 +622,14 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
            mod->dram_pending_request_head = NULL;
            mod->dram_pending_request_tail = NULL;
            memory_setCPUClockSpeed(mod->DRAM, CPUClkFreq);
+           mod->dramcache_victim_list = linked_list_create();
         }
         else
         {
            mod->DRAM = NULL;
            mod->dram_pending_request_head = NULL;
            mod->dram_pending_request_tail = NULL;
+           mod->dramcache_victim_list = NULL;
         }
 
 	/* Fill in prefetcher parameters */
