@@ -182,6 +182,8 @@ struct mod_t
 	struct dramcache_info_list_t * dramcache_hit_info;
 
 	struct linked_list_t * dramcache_victim_list;
+	struct cache_t * dramcache_victim;
+
 	long long dramcache_hit_victim;
 	long long dramcache_victim_reference_interval;
 	/* MY Statistics */

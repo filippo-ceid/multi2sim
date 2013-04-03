@@ -70,6 +70,8 @@ void dramcache_add_request(struct mod_t * mod, struct mod_stack_t *stack,
 void dramcache_update(void);
 void dramcache_printstats(void);
 
+
+void dramcache_victimCreate(struct mod_t * dramcache_mod, unsigned int victimsize, unsigned int victim_assoc);
 void dramcache_addVictim(unsigned int addr);
 unsigned char dramcache_hitVictim(unsigned int addr);
 void dramcache_victim_printstats(FILE * f);

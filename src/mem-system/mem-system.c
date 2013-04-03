@@ -899,6 +899,49 @@ void dramcache_printstats(void)
 }
 
 // Victim cache for DRAM Cache
+unsigned inline dramcache_log2(unsigned value)
+{
+	unsigned logbase2 = 0;
+	unsigned orig = value;
+	value>>=1;
+	while (value>0)
+	{
+		value >>= 1;
+		logbase2++;
+	}
+	if ((unsigned)1<<logbase2<orig)logbase2++;
+	return logbase2;
+}
+
+void dramcache_victimCreate(struct mod_t * dramcache_mod, unsigned int victimsize, unsigned int victim_assoc)
+{
+   unsigned int num_sets, log_assoc;
+
+   if (dramcache_mod == NULL) 
+   {
+      return;
+   }
+   if (victimsize == 0) // Inifinite victim cache
+   {
+      dramcache_mod->dramcache_victim_list = linked_list_create();
+      dramcache_mod->dramcache_victim = NULL;
+      return;
+   }
+   else
+   {
+      dramcache_mod->dramcache_victim_list = NULL;
+      // Finite victim cache
+      // Size in MB: victimsize
+      // Assoc: fixed-32
+      log_assoc = dramcache_log2(victim_assoc);
+      num_sets = victimsize<<(20 - 6 - log_assoc);
+      dramcache_mod->dramcache_victim = cache_create("dramcache_victim", 
+                                       num_sets, 64, victim_assoc, cache_policy_lru);
+   }
+   
+   return;
+}
+
 void dramcache_addVictim(unsigned int addr)
 {
    struct mod_t * dramcache_mod = mod_get_dramcache_mod();
@@ -909,10 +952,29 @@ void dramcache_addVictim(unsigned int addr)
    }
    if (dramcache_mod->dramcache_victim_list == NULL) 
    {
+      unsigned int offset;
+      int set,tag,way;
+
+      if (dramcache_mod->dramcache_victim == NULL) 
+      {
+         return;
+      }
+      // decode address to get set/tag
+      cache_decode_address(dramcache_mod->dramcache_victim, addr, &set, &tag, &offset);
+      // find out the way to insert
+      way = cache_replace_block(dramcache_mod->dramcache_victim, set);
+      // insert the block
+      cache_set_block(dramcache_mod->dramcache_victim, set, way, tag, cache_block_modified);
+      // update the LRU info
+      cache_access_block(dramcache_mod->dramcache_victim, set, way);
+
       return;
    }
-
-   linked_list_add_new(dramcache_mod->dramcache_victim_list, (void*)addr, esim_cycle);
+   else
+   {
+      linked_list_add_new(dramcache_mod->dramcache_victim_list, (void*)addr, esim_cycle);
+      return;
+   }
 }
 
 unsigned char dramcache_hitVictim(unsigned int addr)
@@ -925,23 +987,42 @@ unsigned char dramcache_hitVictim(unsigned int addr)
    }
    if (dramcache_mod->dramcache_victim_list == NULL) 
    {
-      return 0;
+      int set,tag,way,state,ret;
+
+      if (dramcache_mod->dramcache_victim == NULL) 
+      {
+         return 0;
+      }
+      ret = cache_find_block(dramcache_mod->dramcache_victim, addr, &set, &way, &state);
+      if (ret) // hit victim cache. Need to remove it from victim cache. 
+      {
+         // hit victim list
+         (dramcache_mod->dramcache_hit_victim)++;
+         
+         cache_set_block(dramcache_mod->dramcache_victim, set, way, tag, cache_block_invalid);
+      }
+
+      return ret;
    }
-
-   linked_list_find(dramcache_mod->dramcache_victim_list, (void *)addr);
-
-   if ((dramcache_mod->dramcache_victim_list->error_code) != LINKED_LIST_ERR_OK) // miss victim list
+   else
    {
-      return 0;
+      linked_list_find(dramcache_mod->dramcache_victim_list, (void *)addr);
+
+      if ((dramcache_mod->dramcache_victim_list->error_code) != LINKED_LIST_ERR_OK) // miss victim list
+      {
+         return 0;
+      }
+
+      // hit victim list
+      (dramcache_mod->dramcache_hit_victim)++;
+      (dramcache_mod->dramcache_victim_reference_interval) += esim_cycle 
+                     - dramcache_mod->dramcache_victim_list->current->cycle;
+
+      linked_list_remove(dramcache_mod->dramcache_victim_list);
+      return 1;
    }
 
-   // hit victim list
-   (dramcache_mod->dramcache_hit_victim)++;
-   (dramcache_mod->dramcache_victim_reference_interval) += esim_cycle 
-                  - dramcache_mod->dramcache_victim_list->current->cycle;
-
-   linked_list_remove(dramcache_mod->dramcache_victim_list);
-   return 1;
+   return 0;
 }
 
 void dramcache_victim_printstats(FILE * f)
@@ -1012,11 +1093,17 @@ void dram_free(void)
          info_ptr = info_next;
       }
 
-      if (dramcache_mod->dramcache_victim_list == NULL) 
+      if (dramcache_mod->dramcache_victim_list != NULL) 
       {
-         return;
+         
+         linked_list_clear(dramcache_mod->dramcache_victim_list);
       }
-      linked_list_clear(dramcache_mod->dramcache_victim_list);
+     
+      if (dramcache_mod->dramcache_victim != NULL) 
+      {
+         cache_free(dramcache_mod->dramcache_victim);
+      }
+         
    }
 
 }

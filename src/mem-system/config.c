@@ -504,7 +504,7 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
         char * system_ini_name;
         int dram_size;
         unsigned long long CPUClkFreq;
-
+        unsigned int victim_size, victim_assoc;
         
 	/* Cache parameters */
 	snprintf(buf, sizeof buf, "CacheGeometry %s",
@@ -540,8 +540,8 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
         system_ini_name = config_read_string(config,section,"SystemINI","system.ini");
         dram_size = config_read_int(config, section, "DRAMSize", 256);
         CPUClkFreq = config_read_llint(config,section,"CPUClock", 2000000000);
-
-       
+        victim_size = config_read_int(config, section, "VictimSize", 0);
+        victim_assoc = config_read_int(config, section, "VictimAssoc", 32);
 
 	/* Checks */
 	policy = str_map_string_case(&cache_policy_map, policy_str);
@@ -622,7 +622,7 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
            mod->dram_pending_request_head = NULL;
            mod->dram_pending_request_tail = NULL;
            memory_setCPUClockSpeed(mod->DRAM, CPUClkFreq);
-           mod->dramcache_victim_list = linked_list_create();
+           dramcache_victimCreate(mod, victim_size, victim_assoc);
         }
         else
         {
@@ -630,6 +630,7 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
            mod->dram_pending_request_head = NULL;
            mod->dram_pending_request_tail = NULL;
            mod->dramcache_victim_list = NULL;
+           mod->dramcache_victim = NULL;
         }
 
 	/* Fill in prefetcher parameters */
