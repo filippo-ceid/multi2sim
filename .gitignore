@@ -1,6 +1,7 @@
 *.a
 *.o
 *~
+Makefile.in
 Makefile
 config.log
 config.status
