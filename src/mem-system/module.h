@@ -110,7 +110,12 @@ struct dramcache_info_list_t
    unsigned long long id;
    unsigned int hit;
 };
-
+enum miss_handle_policy_t
+{
+      normal = 0,
+      no_miss_latency,		// assume accessing the off-chip dram at the same time to hide latency
+      no_miss_transaction	// assume perfect prediction. don't access dramcache at all.
+};
 //================ END OF MY CODE ===============//
 
 /* Memory module */
@@ -177,6 +182,10 @@ struct mod_t
 	//========= MY CODE =========//
 	/* DRAM */
 	void * DRAM;
+
+	// type of miss_handle_policy
+	enum miss_handle_policy_t miss_dramcache_policy;
+
 	struct dram_req_list_t * dram_pending_request_head;
 	struct dram_req_list_t * dram_pending_request_tail;
 	struct dramcache_info_list_t * dramcache_hit_info;

@@ -551,7 +551,9 @@ void dramcache_read_callback(unsigned id, unsigned long long address, unsigned l
                 stack->tag, 
                 dramcache_mod->name,
                 address);
-      esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_REPLY, stack, 0);
+      if (dramcache_mod->miss_dramcache_policy == normal) {
+         esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_REPLY, stack, 0);
+      }
    }
    else if (access_type == tag_access_writemiss)
    {
@@ -561,7 +563,9 @@ void dramcache_read_callback(unsigned id, unsigned long long address, unsigned l
                 stack->tag, 
                 dramcache_mod->name,
                 address);
-      esim_schedule_event(EV_MOD_NMOESI_WRITE_REQUEST_REPLY, stack, 0);
+      if (dramcache_mod->miss_dramcache_policy == normal){
+         esim_schedule_event(EV_MOD_NMOESI_WRITE_REQUEST_REPLY, stack, 0);
+      }
       
    }
    else if (access_type == data_access) 

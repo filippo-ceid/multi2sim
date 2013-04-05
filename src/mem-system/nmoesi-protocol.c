@@ -2006,12 +2006,26 @@ void mod_handler_nmoesi_read_request(int event, void *data)
                    {
                       dramcache_add_request(stack->target_mod, stack, 0, tag_access_readhit);
                       //dramcache_add_request(stack->target_mod, stack, 0, data_access);
+		      return;
                    }
                    else
                    {
-                      dramcache_add_request(stack->target_mod, stack, 0, tag_access_readmiss);
+                      
+                      if (stack->target_mod->miss_dramcache_policy == normal) 
+		      {
+			 dramcache_add_request(stack->target_mod, stack, 0, tag_access_readmiss);
+			 return;
+                      }
+                      else if (stack->target_mod->miss_dramcache_policy == no_miss_latency) 
+		      {
+			 dramcache_add_request(stack->target_mod, stack, 0, tag_access_readmiss);
+                      }
+		      else //no_miss_transaction
+		      {
+			 // do nothing
+		      }
                    }
-                   return;
+                   
                 }                            
 		//=============== END OF MY CODE ===============//
 		int latency = stack->reply == reply_ack_data_sent_to_peer ? 0 : target_mod->latency;
@@ -2583,12 +2597,26 @@ void mod_handler_nmoesi_write_request(int event, void *data)
                    {
                       dramcache_add_request(stack->target_mod, stack, 0, tag_access_writehit);
                       //dramcache_add_request(stack->target_mod, stack, 1, data_access);
+		      return;
                    }
                    else
                    {
-                      dramcache_add_request(stack->target_mod, stack, 0, tag_access_writemiss);
+                      
+		      if (stack->target_mod->miss_dramcache_policy == normal) 
+		      {
+			 dramcache_add_request(stack->target_mod, stack, 0, tag_access_writemiss);
+			 return;
+                      }
+                      else if (stack->target_mod->miss_dramcache_policy == no_miss_latency) 
+		      {
+			 dramcache_add_request(stack->target_mod, stack, 0, tag_access_writemiss);
+                      }
+		      else //no_miss_transaction
+		      {
+			 // do nothing
+		      }
                    }
-                   return;
+                   
                 }
 		//=============== END OF MY CODE ===============//
 		int latency = stack->reply == reply_ack_data_sent_to_peer ? 0 : target_mod->latency;

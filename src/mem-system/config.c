@@ -505,6 +505,7 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
         int dram_size;
         unsigned long long CPUClkFreq;
         unsigned int victim_size, victim_assoc;
+        char * dramcache_miss_policy;
         
 	/* Cache parameters */
 	snprintf(buf, sizeof buf, "CacheGeometry %s",
@@ -542,6 +543,8 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
         CPUClkFreq = config_read_llint(config,section,"CPUClock", 2000000000);
         victim_size = config_read_int(config, section, "VictimSize", 0);
         victim_assoc = config_read_int(config, section, "VictimAssoc", 32);
+        dramcache_miss_policy = config_read_string(config, section, "MissPolicy", "none");
+
 
 	/* Checks */
 	policy = str_map_string_case(&cache_policy_map, policy_str);
@@ -623,6 +626,22 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
            mod->dram_pending_request_tail = NULL;
            memory_setCPUClockSpeed(mod->DRAM, CPUClkFreq);
            dramcache_victimCreate(mod, victim_size, victim_assoc);
+
+           if ( strcasecmp(dramcache_miss_policy, "none") == 0 ) 
+           {
+              mod->miss_dramcache_policy = normal;
+           }
+           else if ( strcasecmp(dramcache_miss_policy, "nolatency") == 0 ) 
+           {
+              mod->miss_dramcache_policy = no_miss_latency;
+           }
+           else if ( strcasecmp(dramcache_miss_policy, "notransaction") == 0 ) 
+           {
+              mod->miss_dramcache_policy = no_miss_transaction;
+           }
+           else
+              mod->miss_dramcache_policy = normal;
+
         }
         else
         {
