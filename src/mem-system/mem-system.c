@@ -252,21 +252,7 @@ void mem_system_dump_report(void)
 
                         if ((mod->DRAM)&&(mod->kind == mod_kind_cache)) 
                         {
-                           long long total_request;
-                           long long tag_request;
-                           tag_request = mod->dramcache_request_tag_access_readhit + mod->dramcache_request_tag_access_writehit
-                                    + mod->dramcache_request_tag_access_readmiss + mod->dramcache_request_tag_access_writemiss;
-                           total_request = tag_request + mod->dramcache_request_data_access + mod->dramcache_request_new_block_allocation;
-
-                           fprintf(f, "DRAMCache Requests = %lld\n", total_request);
-                           fprintf(f, "DRAMCache Tag Requests = %lld\n", tag_request);
-                           fprintf(f, "DRAMCache Data Requests = %lld\n", mod->dramcache_request_data_access);
-                           fprintf(f, "DRAMCache NewBlock Allocation = %lld\n", mod->dramcache_request_new_block_allocation);
-                           fprintf(f, "DRAMCache Tag Requests (ReadHit) = %lld\n", mod->dramcache_request_tag_access_readhit);
-                           fprintf(f, "DRAMCache Tag Requests (WriteHit) = %lld\n", mod->dramcache_request_tag_access_writehit);
-                           fprintf(f, "DRAMCache Tag Requests (ReadMiss) = %lld\n", mod->dramcache_request_tag_access_readmiss);
-                           fprintf(f, "DRAMCache Tag Requests (WriteMiss) = %lld\n\n", mod->dramcache_request_tag_access_writemiss);
-                           
+                           dramcache_report_dump(f);
                            dramcache_victim_printstats(f);
                         }
                         //=== END OF MY CODE ===//
@@ -293,7 +279,9 @@ void mem_system_dump_report(void)
                 fprintf(f, "DoA Evictions = %lld\n", mod->doa_evictions);  //===== MY CODE =====//
                 fprintf(f, "DoA Ratio = %.4g\n\n", mod->evictions ? 
                         (double) mod->doa_evictions/mod->evictions : 0.0); //===== MY CODE =====//
-                fprintf(f, "Writebacks = %lld\n", mod->writebacks);        //===== MY CODE =====//
+
+                fprintf(f, "Writebacks (from upper level) = %lld\n", mod->writebacks_from_up);//===== MY CODE =====//
+                fprintf(f, "Writebacks (to lower level) = %lld\n", mod->writebacks_to_down);//===== MY CODE =====//
                 fprintf(f, "Dir evicts = %lld\n\n", mod->evict_accesses);  //===== MY CODE =====//
 
                 fprintf(f, "Retries = %lld\n", mod->read_retries + mod->write_retries + 
@@ -513,11 +501,12 @@ void dramcache_read_callback(unsigned id, unsigned long long address, unsigned l
                 address);
       if (cache_assoc == 1)  // alloy cache
       {
-         esim_schedule_event(EV_MOD_NMOESI_WRITE_REQUEST_REPLY, stack, 0);
+         dramcache_add_request(dramcache_mod, stack, 1, write_data_access);
+         //esim_schedule_event(EV_MOD_NMOESI_WRITE_REQUEST_REPLY, stack, 0);
       }
       else if (cache_assoc == 29) // gabriel's method
       {
-         dramcache_add_request(dramcache_mod, stack, 1, data_access);
+         dramcache_add_request(dramcache_mod, stack, 1, write_data_access);
       }
    }
    else if (access_type == tag_access_readhit)
@@ -534,7 +523,7 @@ void dramcache_read_callback(unsigned id, unsigned long long address, unsigned l
       }
       else if (cache_assoc == 29) // gabriel's method
       {
-         dramcache_add_request(dramcache_mod, stack, 0, data_access);
+         dramcache_add_request(dramcache_mod, stack, 0, read_data_access);
       }
    }
    else if (access_type == tag_access_readmiss)
@@ -557,12 +546,12 @@ void dramcache_read_callback(unsigned id, unsigned long long address, unsigned l
                 stack->tag, 
                 dramcache_mod->name,
                 address);
-      if (dramcache_mod->miss_dramcache_policy == normal){
-         esim_schedule_event(EV_MOD_NMOESI_WRITE_REQUEST_REPLY, stack, 0);
-      }
+      dramcache_add_request(dramcache_mod, stack, 1, write_data_access);
+      //esim_schedule_event(EV_MOD_NMOESI_WRITE_REQUEST_REPLY, stack, 0);
+
       
    }
-   else if (access_type == data_access) 
+   else if (access_type == read_data_access) 
    {
       mem_debug("  %lld %lld 0x%x %s (addr after mapping: 0x%x) data read-dram cache callback\n", 
                 esim_cycle, 
@@ -571,6 +560,10 @@ void dramcache_read_callback(unsigned id, unsigned long long address, unsigned l
                 dramcache_mod->name,
                 address);
       esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_REPLY, stack, 0);
+   }
+   else if (access_type == writeback_tag_access) 
+   {
+      dramcache_add_request(dramcache_mod, stack, 1, writeback_data_access);
    }
    else 
    {
@@ -598,7 +591,7 @@ void dramcache_write_callback(unsigned id, unsigned long long address, unsigned 
    stack = mod_dram_req_remove(dramcache_mod,address,1);
 
    // Add reply event
-   if (access_type == data_access) 
+   if (access_type == write_data_access) 
    {
       mem_debug("  %lld %lld 0x%x %s (addr after mapping: 0x%x) data write-dram cache callback\n", 
                 esim_cycle, 
@@ -621,6 +614,11 @@ void dramcache_write_callback(unsigned id, unsigned long long address, unsigned 
 
       //free(stack);
    }
+   else if (access_type == writeback_data_access)  
+   {
+      // do nothing
+   }
+
    return;
 }
 
@@ -750,7 +748,7 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
       {
          new_addr = (row_cnt<<11)+(col_cnt*72);
       }
-      else if (access_type == data_access) 
+      else if ( (access_type == write_data_access)||(access_type == read_data_access) ) 
       {
          // for alloy cache, data is already fetched by tag access.
          // so this only happens for stores.
@@ -768,7 +766,7 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
       {
          new_addr = (row_cnt<<11);
       }
-      else if (access_type == data_access) 
+      else if ( (access_type == write_data_access)||(access_type == read_data_access) )
       {
          // for alloy cache, data is already fetched by tag access.
          // so this only happens for stores.
@@ -802,63 +800,28 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
    {
       (dramcache_mod->dramcache_request_tag_access_writemiss)++;
    }
-   else if (access_type == data_access)
+   else if (access_type == write_data_access)
    {
-      (dramcache_mod->dramcache_request_data_access)++;
+      (dramcache_mod->dramcache_request_write_data_access)++;
+   }
+   else if (access_type == read_data_access)
+   {
+      (dramcache_mod->dramcache_request_read_data_access)++;
    }
    else if (access_type == new_block_allocation)
    {
       (dramcache_mod->dramcache_request_new_block_allocation)++;
    }
+   else if (access_type == writeback_data_access)
+   {
+      (dramcache_mod->dramcache_request_writeback_data_access)++;
+   }
+   else if (access_type == writeback_tag_access)
+   {
+      (dramcache_mod->dramcache_request_writeback_tag_access)++;
+   }
 
-   // debug info
-   if (iswrite) 
-   {
-      mem_debug("  %lld %lld 0x%x %s (addr after mapping: 0x%x) add write request to dram cache ", 
-                esim_cycle, 
-                stack->id,
-                stack->addr, 
-                dramcache_mod->name,
-                new_addr);
-      if (access_type <= tag_access_writemiss) 
-      {
-         mem_debug(" tag access\n");
-      }
-      else if (access_type == data_access) 
-      {
-         mem_debug(" data access\n");
-      }
-      else if (access_type == new_block_allocation) 
-      {
-            mem_debug(" new line allocation\n");
-      }
-      else
-         mem_debug("\n");
-   }
-   else 
-   {
-      mem_debug("  %lld %lld 0x%x %s (addr after mapping: 0x%x) add read request to dram cache (hit:%d)", 
-                esim_cycle, 
-                stack->id,
-		stack->addr, 
-                dramcache_mod->name,
-                new_addr,
-                stack->hit);
-      if (access_type <= tag_access_writemiss) 
-      {
-         mem_debug(" tag access\n");
-      }
-      else if (access_type == data_access) 
-      {
-         mem_debug(" data access\n");
-      }
-      else if (access_type == new_block_allocation) 
-      {
-            mem_debug(" new line allocation\n");
-      }
-      else
-         mem_debug("\n");
-   }
+   
    return;
 }
 
@@ -1021,6 +984,47 @@ unsigned char dramcache_hitVictim(unsigned int addr)
    }
 
    return 0;
+}
+
+void dramcache_report_dump(FILE * f)
+{
+   long long total_request;
+   long long tag_request, data_request;
+   struct mod_t * dramcache_mod = mod_get_dramcache_mod();
+   if (dramcache_mod == NULL) 
+   {
+      return;
+   }
+
+   tag_request = dramcache_mod->dramcache_request_tag_access_readhit 
+         + dramcache_mod->dramcache_request_tag_access_writehit
+         + dramcache_mod->dramcache_request_tag_access_readmiss 
+         + dramcache_mod->dramcache_request_tag_access_writemiss
+         + dramcache_mod->dramcache_request_writeback_tag_access;
+
+   data_request = dramcache_mod->dramcache_request_read_data_access
+         + dramcache_mod->dramcache_request_write_data_access
+         + dramcache_mod->dramcache_request_writeback_data_access;
+
+   total_request = tag_request 
+         + data_request 
+         + dramcache_mod->dramcache_request_new_block_allocation;
+
+   fprintf(f, "DRAMCache Requests = %lld\n", total_request);
+   fprintf(f, "DRAMCache Tag Requests = %lld\n", tag_request);
+   fprintf(f, "DRAMCache Data Requests = %lld\n", data_request);
+   fprintf(f, "DRAMCache NewBlock Allocation = %lld\n\n", dramcache_mod->dramcache_request_new_block_allocation);
+
+   fprintf(f, "DRAMCache Tag Requests (ReadHit) = %lld\n", dramcache_mod->dramcache_request_tag_access_readhit);
+   fprintf(f, "DRAMCache Tag Requests (ReadMiss) = %lld\n", dramcache_mod->dramcache_request_tag_access_readmiss);
+   fprintf(f, "DRAMCache Tag Requests (WriteHit) = %lld\n", dramcache_mod->dramcache_request_tag_access_writehit);
+   fprintf(f, "DRAMCache Tag Requests (WriteMiss) = %lld\n", dramcache_mod->dramcache_request_tag_access_writemiss);
+   fprintf(f, "DRAMCache Tag Requests (Writeback) = %lld\n\n", dramcache_mod->dramcache_request_writeback_tag_access);
+
+   fprintf(f, "DRAMCache Data Requests (Read) = %lld\n", dramcache_mod->dramcache_request_read_data_access);
+   fprintf(f, "DRAMCache Data Requests (Write) = %lld\n", dramcache_mod->dramcache_request_write_data_access);
+   fprintf(f, "DRAMCache Data Requests (Writeback) = %lld\n\n", dramcache_mod->dramcache_request_writeback_data_access);
+   return;
 }
 
 void dramcache_victim_printstats(FILE * f)

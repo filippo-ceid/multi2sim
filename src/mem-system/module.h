@@ -88,7 +88,10 @@ enum dramcache_type_t
       tag_access_writehit,
       tag_access_readmiss,
       tag_access_writemiss,
-      data_access,
+      read_data_access,
+      write_data_access,
+      writeback_tag_access,
+      writeback_data_access,
       new_block_allocation
 };
 
@@ -202,7 +205,10 @@ struct mod_t
 	long long dramcache_request_tag_access_writehit;
 	long long dramcache_request_tag_access_readmiss;
 	long long dramcache_request_tag_access_writemiss;
-	long long dramcache_request_data_access;
+	long long dramcache_request_write_data_access;
+	long long dramcache_request_read_data_access;
+	long long dramcache_request_writeback_tag_access;
+	long long dramcache_request_writeback_data_access;
 	long long dramcache_request_new_block_allocation;
 
 	long long dramcache_hit_victim;
@@ -267,8 +273,9 @@ struct mod_t
 	/* Statistics */
 	long long accesses;
 	long long hits;
-	long long evict_accesses; // MY CODE
-	long long writebacks; // MY CODE
+	long long evict_accesses; 	// MY CODE
+	long long writebacks_from_up;	// MY CODE
+	long long writebacks_to_down;	// MY CODE
 
 	long long reads;
 	long long effective_reads;

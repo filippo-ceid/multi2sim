@@ -1033,8 +1033,11 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 			if (stack->hit) mod->hits++;
                 }
 
-		
-		if (stack->read)
+                if ( stack->isEvict ) // MY CODE
+		{
+			mod->evict_accesses++;
+                }
+		else if (stack->read)
 		{
 			mod->reads++;
 			mod->effective_reads++;
@@ -1054,8 +1057,12 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 			if (stack->hit)
 				mod->nc_write_hits++;
 		}
-		else if ( (stack->write) && (stack->isEvict == 0) ) // MY CODE
+		else if (stack->write)
 		{
+			if (stack->isWriteback) // MY CODE
+				 mod->writebacks_from_up++;
+             
+
 			mod->writes++;
 			mod->effective_writes++;
 			stack->blocking ? mod->blocking_writes++ : mod->non_blocking_writes++;
@@ -1074,14 +1081,6 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 		{
 			/* FIXME */
 		}
-		else if (stack->isEvict) // MY CODE
-		{
-			mod->evict_accesses++;
-		}
-                else if (stack->isWriteback) // MY CODE
-		{
-			mod->writebacks++;
-                }
 		else 
 		{
 			fatal("Unknown memory operation type");
@@ -1427,6 +1426,8 @@ void mod_handler_nmoesi_evict(int event, void *data)
 			/* Need to transmit data to low module */
 			msg_size = 8 + mod->block_size;
 			stack->reply = reply_ack_data;
+
+			mod->writebacks_to_down++; //==== MY CODE ====//
 		}
 		/* If state is E/S, just an ack needs to be sent */
 		else 
@@ -1468,10 +1469,20 @@ void mod_handler_nmoesi_evict(int event, void *data)
 		new_stack->write = 1;
 		new_stack->retry = 0;
 		//======= MY CODE ========//
-		if (stack->reply == reply_ack_data)
+		if (stack->reply == reply_ack_data) // writebacks from up level 
 		{
-		   new_stack->isWriteback = 1;
-		   new_stack->isEvict = 0;
+			new_stack->isWriteback = 1;
+			new_stack->isEvict = 0;
+			//================== MY CODE ==================//
+			// DRAM cache: allocate new cache line
+			// event will be replied as usual. 
+			// But the cache_set_block time will be delayed
+			if ( (target_mod->kind == mod_kind_cache) 
+			     && (target_mod->DRAM != NULL) )
+			{
+			   dramcache_add_request(target_mod, stack, 0, writeback_tag_access);
+			}   
+		      //================ END OF MY CODE ==============//
 		}
 		else
 		{
@@ -2031,7 +2042,9 @@ void mod_handler_nmoesi_read_request(int event, void *data)
                    if ( mod_get_dramcache_info(stack->target_mod, stack->id, stack->addr) ) 
                    {
                       dramcache_add_request(stack->target_mod, stack, 0, tag_access_readhit);
-                      //dramcache_add_request(stack->target_mod, stack, 0, data_access);
+                      // For alloy cache, the data is fetched with tag. no extra data request
+		      // For Gab's method, the data request will 
+		      // 	be established by tag request's callback function
 		      return;
                    }
                    else
@@ -2619,12 +2632,17 @@ void mod_handler_nmoesi_write_request(int event, void *data)
                 if ( (stack->target_mod->kind == mod_kind_cache) 
                      && (stack->target_mod->DRAM != NULL) )
                 {
+		   // write hit
                    if ( mod_get_dramcache_info(stack->target_mod, stack->id, stack->addr) ) 
                    {
+		      // read request to get tag info
                       dramcache_add_request(stack->target_mod, stack, 0, tag_access_writehit);
-                      //dramcache_add_request(stack->target_mod, stack, 1, data_access);
+		      // For both methods, an extra data write request is needed.
+		      // The data write request will 
+		      // 	be established by tag request's callback function
 		      return;
                    }
+		   // write miss
                    else
                    {
                       
@@ -2636,6 +2654,8 @@ void mod_handler_nmoesi_write_request(int event, void *data)
                       else if (stack->target_mod->miss_dramcache_policy == no_miss_latency) 
 		      {
 			 dramcache_add_request(stack->target_mod, stack, 0, tag_access_writemiss);
+			 // no way to hide write latency
+			 return;
                       }
 		      else //no_miss_transaction
 		      {

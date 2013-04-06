@@ -19,7 +19,7 @@ public:
 	void (*writeFunc)(unsigned, unsigned long long, unsigned long long);
 
 	void init(void* rFunc, void* wFunc, int size,
-                  char * dram_ini_name, char * system_ini_name, char * ini_dir);
+                  char * dram_ini_name, char * system_ini_name, char * ini_dir, char * logFileSuffix);
 	void read_complete(unsigned, uint64_t, uint64_t);
 	void write_complete(unsigned, uint64_t, uint64_t);
 };
@@ -46,7 +46,7 @@ void power_callback(double a, double b, double c, double d)
 
 
 void some_object::init(void* rFunc, void* wFunc, int size,
-                       char * dram_ini_name, char * system_ini_name, char * ini_dir)
+                       char * dram_ini_name, char * system_ini_name, char * ini_dir, char * logFileSuffix)
 {
 	readFunc = (void (*)(unsigned, unsigned long long, unsigned long long))rFunc;
 	writeFunc = (void (*)(unsigned, unsigned long long, unsigned long long))wFunc;
@@ -54,7 +54,7 @@ void some_object::init(void* rFunc, void* wFunc, int size,
 	TransactionCompleteCB *read_cb = new Callback<some_object, void, unsigned, uint64_t, uint64_t>(this, &some_object::read_complete);
         TransactionCompleteCB *write_cb = new Callback<some_object, void, unsigned, uint64_t, uint64_t>(this, &some_object::write_complete);
 
-        MultiChannelMemorySystem *mem = getMemorySystemInstance(dram_ini_name, system_ini_name, ini_dir, "dram_result", size);
+        MultiChannelMemorySystem *mem = getMemorySystemInstance(dram_ini_name, system_ini_name, ini_dir, "dram_result", size, logFileSuffix);
 
 
         mem->RegisterCallbacks(read_cb, write_cb, power_callback);
@@ -66,10 +66,10 @@ extern "C"
 {
 
 void* dramsim2_init(void *rFunc, void* wFunc, int size,
-                    char * dram_ini_name, char * system_ini_name, char * ini_dir)
+                    char * dram_ini_name, char * system_ini_name, char * ini_dir, char * logFileSuffix)
 {
 	some_object * obj = (some_object*)malloc(sizeof(some_object));
-	obj->init(rFunc,wFunc, size, dram_ini_name, system_ini_name, ini_dir);
+	obj->init(rFunc,wFunc, size, dram_ini_name, system_ini_name, ini_dir, logFileSuffix);
 
 	return (void*) obj;
 }

@@ -506,7 +506,8 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
         unsigned long long CPUClkFreq;
         unsigned int victim_size, victim_assoc;
         char * dramcache_miss_policy;
-        
+        char * logFileSuffix;
+
 	/* Cache parameters */
 	snprintf(buf, sizeof buf, "CacheGeometry %s",
 		config_read_string(config, section, "Geometry", ""));
@@ -544,7 +545,7 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
         victim_size = config_read_int(config, section, "VictimSize", 0);
         victim_assoc = config_read_int(config, section, "VictimAssoc", 32);
         dramcache_miss_policy = config_read_string(config, section, "MissPolicy", "none");
-
+        logFileSuffix = config_read_string(config, section, "LogSuffix", "-cache");
 
 	/* Checks */
 	policy = str_map_string_case(&cache_policy_map, policy_str);
@@ -621,7 +622,8 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
                                       dram_size, 
                                       dram_ini_name, 
                                       system_ini_name, 
-                                      ini_dir );
+                                      ini_dir,
+                                      logFileSuffix );
            mod->dram_pending_request_head = NULL;
            mod->dram_pending_request_tail = NULL;
            memory_setCPUClockSpeed(mod->DRAM, CPUClkFreq);
@@ -756,6 +758,7 @@ static struct mod_t *mem_config_read_dram(struct config_t *config, char *section
         char * ini_dir;
         char * dram_ini_name;
         char * system_ini_name;
+        char * logFileSuffix;
         int dram_size;
         unsigned long long CPUClkFreq;
 
@@ -764,6 +767,7 @@ static struct mod_t *mem_config_read_dram(struct config_t *config, char *section
         system_ini_name = config_read_string(config,section,"SystemINI","system.ini");
         dram_size = config_read_int(config, section, "DRAMSize", 16384);
         CPUClkFreq = config_read_llint(config,section,"CPUClock", 2000000000);
+        logFileSuffix = config_read_string(config, section, "LogSuffix", "-mem");
 
         // Keep the rest to make other funtions happy 
         // ==========================================
@@ -818,7 +822,7 @@ static struct mod_t *mem_config_read_dram(struct config_t *config, char *section
         // ==========================================
 
         mod->DRAM = dramsim2_init( (void*)dram_read_callback, (void*)dram_write_callback, dram_size, 
-                                  dram_ini_name, system_ini_name, ini_dir);
+                                  dram_ini_name, system_ini_name, ini_dir, logFileSuffix);
         mod->dram_pending_request_head = NULL;
         mod->dram_pending_request_tail = NULL;
         memory_setCPUClockSpeed(mod->DRAM, CPUClkFreq);
