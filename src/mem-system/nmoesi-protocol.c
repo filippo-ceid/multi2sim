@@ -1027,10 +1027,13 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 				str_map_value(&cache_block_state_map, stack->state));
 
 		/* Statistics */
-		mod->accesses++;
-		if (stack->hit)
-			mod->hits++;
+                if ( stack->isEvict==0 ) // MY CODE
+		{
+			mod->accesses++;
+			if (stack->hit) mod->hits++;
+                }
 
+		
 		if (stack->read)
 		{
 			mod->reads++;
@@ -1051,7 +1054,7 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 			if (stack->hit)
 				mod->nc_write_hits++;
 		}
-		else if (stack->write)
+		else if ( (stack->write) && (stack->isEvict == 0) ) // MY CODE
 		{
 			mod->writes++;
 			mod->effective_writes++;
@@ -1071,6 +1074,14 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 		{
 			/* FIXME */
 		}
+		else if (stack->isEvict) // MY CODE
+		{
+			mod->evict_accesses++;
+		}
+                else if (stack->isWriteback) // MY CODE
+		{
+			mod->writebacks++;
+                }
 		else 
 		{
 			fatal("Unknown memory operation type");
@@ -1196,6 +1207,9 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 		{
 			mod->cache->sets[stack->set].blocks[stack->way].hasHit = 1;
 		}
+		// for cache statistics
+		mod->cache->sets[stack->set].access++;
+
 		//====== END OF MY CODE ======//
 
 		/* Entry is locked. Record the transient tag so that a subsequent lookup
@@ -1453,6 +1467,18 @@ void mod_handler_nmoesi_evict(int event, void *data)
 		new_stack->blocking = 0;
 		new_stack->write = 1;
 		new_stack->retry = 0;
+		//======= MY CODE ========//
+		if (stack->reply == reply_ack_data)
+		{
+		   new_stack->isWriteback = 1;
+		   new_stack->isEvict = 0;
+		}
+		else
+		{
+		   new_stack->isWriteback = 0;
+		   new_stack->isEvict = 1;
+		}
+		//==== END OF MY CODE ====//
 		esim_schedule_event(EV_MOD_NMOESI_FIND_AND_LOCK, new_stack, 0);
 		return;
 	}

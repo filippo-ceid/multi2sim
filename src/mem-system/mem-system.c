@@ -235,7 +235,6 @@ void mem_system_dump_report(void)
 	/* Report for each cache */
 	for (i = 0; i < list_count(mem_system->mod_list); i++)
 	{
-                unsigned int unused_blocks, doa_blocks, total_blocks;
 		mod = list_get(mem_system->mod_list, i);
 		cache = mod->cache;
 		fprintf(f, "[ %s ]\n", mod->name);
@@ -249,15 +248,8 @@ void mem_system_dump_report(void)
 			fprintf(f, "Policy = %s\n\n", str_map_value(&cache_policy_map, cache->policy));
 
                         //====== MY CODE =======//
-                        cache_usage(cache, &unused_blocks, &doa_blocks, &total_blocks);
-                        fprintf(f, "Total Blocks = %d\n", total_blocks);
-                        fprintf(f, "Unused Blocks = %d\n", unused_blocks);
-                        fprintf(f, "Unused Ratio = %.4g\n", total_blocks ?
-                                (double) unused_blocks / total_blocks : 0.0);
-                        fprintf(f, "DoA Blocks = %d\n", doa_blocks);
-                        fprintf(f, "DoA Ratio = %.4g\n\n", total_blocks ?
-                                (double) doa_blocks / total_blocks : 0.0);
-                        
+                        cache_printstats(cache, f);
+
                         if ((mod->DRAM)&&(mod->kind == mod_kind_cache)) 
                         {
                            long long total_request;
@@ -298,9 +290,11 @@ void mem_system_dump_report(void)
 			(double) mod->hits / mod->accesses : 0.0);
 
 		fprintf(f, "Evictions = %lld\n", mod->evictions);
-                fprintf(f, "DoA Evictions = %lld\n", mod->doa_evictions);//===== MY CODE =====//
+                fprintf(f, "DoA Evictions = %lld\n", mod->doa_evictions);  //===== MY CODE =====//
                 fprintf(f, "DoA Ratio = %.4g\n\n", mod->evictions ? 
-                        (double) mod->doa_evictions/mod->evictions : 0.0);//===== MY CODE =====//
+                        (double) mod->doa_evictions/mod->evictions : 0.0); //===== MY CODE =====//
+                fprintf(f, "Writebacks = %lld\n", mod->writebacks);        //===== MY CODE =====//
+                fprintf(f, "Dir evicts = %lld\n\n", mod->evict_accesses);  //===== MY CODE =====//
 
                 fprintf(f, "Retries = %lld\n", mod->read_retries + mod->write_retries + 
 			mod->nc_write_retries);

@@ -99,7 +99,10 @@ struct mod_stack_t
 	struct mod_stack_t *bucket_list_next;
 
 	/* Flags */
-	unsigned char victimHasHit; //==== MY CODE ====//
+	unsigned char victimHasHit; 	//==== MY CODE ====//
+	unsigned char isEvict; 		//==== MY CODE ====//
+	unsigned char isWriteback; 	//==== MY CODE ====//
+
 	int hit : 1;
 	int err : 1;
 	int shared : 1;

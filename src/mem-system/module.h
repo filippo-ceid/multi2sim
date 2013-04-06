@@ -193,12 +193,11 @@ struct mod_t
 	struct linked_list_t * dramcache_victim_list;
 	struct cache_t * dramcache_victim;
 
-	long long dramcache_hit_victim;
-	long long dramcache_victim_reference_interval;
+	
 	/* MY Statistics */
 	long long doa_evictions;
 
-	// for dramcache
+	// Statistics for dramcache
 	long long dramcache_request_tag_access_readhit;
 	long long dramcache_request_tag_access_writehit;
 	long long dramcache_request_tag_access_readmiss;
@@ -206,7 +205,10 @@ struct mod_t
 	long long dramcache_request_data_access;
 	long long dramcache_request_new_block_allocation;
 
-	// for off-chip dram
+	long long dramcache_hit_victim;
+	long long dramcache_victim_reference_interval;
+
+	// Statistics for off-chip dram
 	long long dram_request_write;
 	long long dram_request_read;
 
@@ -265,6 +267,8 @@ struct mod_t
 	/* Statistics */
 	long long accesses;
 	long long hits;
+	long long evict_accesses; // MY CODE
+	long long writebacks; // MY CODE
 
 	long long reads;
 	long long effective_reads;

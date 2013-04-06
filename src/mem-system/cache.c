@@ -219,6 +219,44 @@ void cache_usage(struct cache_t *cache, unsigned int * unused_ptr, unsigned int 
 
    return;
 }
+void cache_printstats(struct cache_t *cache, FILE *f)
+{
+   unsigned int set, way;
+   struct cache_block_t *block;
+
+   unsigned int unused_blocks=0;
+   unsigned int doa_blocks=0;
+   unsigned int total_blocks=0;
+
+   for (set = 0; set < cache->num_sets; set++)
+   {
+	for (way = 0; way < cache->assoc; way++)
+	{
+		block = &cache->sets[set].blocks[way];
+		total_blocks++;
+
+		if (block->state == cache_block_invalid) 
+		{
+		   unused_blocks++;
+                }
+                else if (block->hasHit == 0) 
+		{
+		   doa_blocks++;
+                }
+	}
+   }
+
+   fprintf(f, "Total Blocks = %d\n", total_blocks);
+   fprintf(f, "Unused Blocks = %d\n", unused_blocks);
+   fprintf(f, "Unused Ratio = %.4g\n", total_blocks ?
+	   (double) unused_blocks / total_blocks : 0.0);
+   fprintf(f, "DoA Blocks = %d\n", doa_blocks);
+   fprintf(f, "DoA Ratio = %.4g\n\n", total_blocks ?
+           (double) doa_blocks / total_blocks : 0.0);
+
+
+   return;
+}
 //======== END OF MY CODE ======//
 
 /* Return {set, tag, offset} for a given address */

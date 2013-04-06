@@ -63,6 +63,9 @@ struct cache_set_t
 	struct cache_block_t *way_head;
 	struct cache_block_t *way_tail;
 	struct cache_block_t *blocks;
+//-------MY CODE---------//
+	unsigned int access;
+//----END OF MY CODE-----//
 };
 
 struct cache_t
@@ -87,6 +90,7 @@ struct cache_t *cache_create(char *name, unsigned int num_sets, unsigned int blo
 void cache_free(struct cache_t *cache);
 //=========== MY CODE ==========//
 void cache_usage(struct cache_t *cache, unsigned int * unused_ptr, unsigned int * doa_ptr, unsigned int * total_ptr);
+void cache_printstats(struct cache_t *cache, FILE *f);
 //======== END OF MY CODE ======//
 void cache_decode_address(struct cache_t *cache, unsigned int addr,
 	int *set_ptr, int *tag_ptr, unsigned int *offset_ptr);
