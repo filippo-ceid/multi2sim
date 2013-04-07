@@ -286,8 +286,9 @@ void mod_handler_nmoesi_load(int event, void *data)
 		/* Unlock directory entry */
 		dir_entry_unlock(mod->dir, stack->set, stack->way);
 
-		/* Continue */
-		esim_schedule_event(EV_MOD_NMOESI_LOAD_FINISH, stack, 0);
+		/* Impose the access latency before continuing */
+		esim_schedule_event(EV_MOD_NMOESI_LOAD_FINISH, stack, 
+			mod->latency);
 		return;
 	}
 
@@ -480,8 +481,9 @@ void mod_handler_nmoesi_store(int event, void *data)
 			stack->tag, cache_block_modified);
 		dir_entry_unlock(mod->dir, stack->set, stack->way);
 
-		/* Continue */
-		esim_schedule_event(EV_MOD_NMOESI_STORE_FINISH, stack, 0);
+		/* Impose the access latency before continuing */
+		esim_schedule_event(EV_MOD_NMOESI_STORE_FINISH, stack, 
+			mod->latency);
 		return;
 	}
 
@@ -649,6 +651,18 @@ void mod_handler_nmoesi_nc_store(int event, void *data)
 			return;
 		}
 
+		/* Main memory modules are a special case */
+		if (mod->kind == mod_kind_main_memory)
+		{
+			/* For non-coherent stores, finding an E or M for the state of
+			 * a cache block in the directory still requires a message to 
+			 * the lower-level module so it can update its owner field.
+			 * These messages should not be sent if the module is a main
+			 * memory module. */
+			esim_schedule_event(EV_MOD_NMOESI_NC_STORE_UNLOCK, stack, 0);
+			return;
+		}
+
 		/* N/S are hit */
 		if (stack->state == cache_block_shared || stack->state == cache_block_noncoherent)
 		{
@@ -721,8 +735,9 @@ void mod_handler_nmoesi_nc_store(int event, void *data)
 		/* Unlock directory entry */
 		dir_entry_unlock(mod->dir, stack->set, stack->way);
 
-		/* Continue */
-		esim_schedule_event(EV_MOD_NMOESI_NC_STORE_FINISH, stack, 0);
+		/* Impose the access latency before continuing */
+		esim_schedule_event(EV_MOD_NMOESI_NC_STORE_FINISH, stack, 
+			mod->latency);
 		return;
 	}
 
@@ -1412,6 +1427,10 @@ void mod_handler_nmoesi_evict(int event, void *data)
 		assert(low_mod == mod_get_low_mod(mod, stack->tag));
 		assert(low_node && low_node->user_data == low_mod);
 		
+		/* Update the cache state since it may have changed after its 
+		 * higher-level modules were invalidated */
+		cache_get_block(mod->cache, stack->set, stack->way, NULL, &stack->state);
+
 		/* State = I */
 		if (stack->state == cache_block_invalid)
 		{
@@ -2686,13 +2705,13 @@ void mod_handler_nmoesi_write_request(int event, void *data)
 		{
 			/* Exclusive and shared states send an ack */
 			stack->reply_size = 8;
-			mod_stack_set_reply(stack, reply_ack);
+			mod_stack_set_reply(ret, reply_ack);
 		}
 		else if (stack->state == cache_block_noncoherent)
 		{
 			/* Non-coherent state sends data */
 			stack->reply_size = target_mod->block_size + 8;
-			mod_stack_set_reply(stack, reply_ack_data);
+			mod_stack_set_reply(ret, reply_ack_data);
 		}
 		else if (stack->state == cache_block_modified || 
 			stack->state == cache_block_owned)
@@ -2701,7 +2720,7 @@ void mod_handler_nmoesi_write_request(int event, void *data)
 			{
 				/* Modified or owned entries send data directly to peer 
 				 * if it exists */
-				mod_stack_set_reply(stack, reply_ack_data_sent_to_peer);
+				mod_stack_set_reply(ret, reply_ack_data_sent_to_peer);
 				stack->reply_size = 8;
 
 				/* This control path uses an intermediate stack that disappears, so 
@@ -2721,7 +2740,7 @@ void mod_handler_nmoesi_write_request(int event, void *data)
 			else 
 			{
 				/* If peer does not exist, data is returned to mod */
-				mod_stack_set_reply(stack, reply_ack_data);
+				mod_stack_set_reply(ret, reply_ack_data);
 				stack->reply_size = target_mod->block_size + 8;
 			}
 		}
@@ -2746,7 +2765,7 @@ void mod_handler_nmoesi_write_request(int event, void *data)
 		cache_set_block(target_mod->cache, stack->set, stack->way, 0, cache_block_invalid);
 		dir_entry_unlock(target_mod->dir, stack->set, stack->way);
 		
-		int latency = stack->reply == reply_ack_data_sent_to_peer ? 0 : target_mod->latency;
+		int latency = ret->reply == reply_ack_data_sent_to_peer ? 0 : target_mod->latency;
 		esim_schedule_event(EV_MOD_NMOESI_WRITE_REQUEST_REPLY, stack, latency);
 		return;
 	}
@@ -2951,6 +2970,10 @@ void mod_handler_nmoesi_invalidate(int event, void *data)
 			stack->tag, mod->name);
 		mem_trace("mem.access name=\"A-%lld\" state=\"%s:invalidate_finish\"\n",
 			stack->id, mod->name);
+
+		if (stack->reply == reply_ack_data)
+			cache_set_block(mod->cache, stack->set, stack->way, stack->tag,
+				cache_block_modified);
 
 		/* Ignore while pending */
 		assert(stack->pending > 0);
