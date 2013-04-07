@@ -507,6 +507,7 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
         unsigned int victim_size, victim_assoc;
         char * dramcache_miss_policy;
         char * logFileSuffix;
+        int virtualset_size;
 
 	/* Cache parameters */
 	snprintf(buf, sizeof buf, "CacheGeometry %s",
@@ -546,6 +547,7 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
         victim_assoc = config_read_int(config, section, "VictimAssoc", 32);
         dramcache_miss_policy = config_read_string(config, section, "MissPolicy", "none");
         logFileSuffix = config_read_string(config, section, "LogSuffix", "-cache");
+        virtualset_size = config_read_int(config, section, "VirtualSet", 28);
 
 	/* Checks */
 	policy = str_map_string_case(&cache_policy_map, policy_str);
@@ -644,6 +646,7 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
            else
               mod->miss_dramcache_policy = normal;
 
+           dramcache_virtualset_create(mod, virtualset_size);
         }
         else
         {

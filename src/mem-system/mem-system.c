@@ -254,6 +254,7 @@ void mem_system_dump_report(void)
                         {
                            dramcache_report_dump(f);
                            dramcache_victim_printstats(f);
+                           dramcache_interval_buckets_printstats(f);
                         }
                         //=== END OF MY CODE ===//
                 }
@@ -903,9 +904,10 @@ void dramcache_victimCreate(struct mod_t * dramcache_mod, unsigned int victimsiz
    return;
 }
 
-void dramcache_addVictim(unsigned int addr)
+void dramcache_addVictim(struct cache_block_t *block)
 {
    struct mod_t * dramcache_mod = mod_get_dramcache_mod();
+   unsigned int addr = block->tag;
 
    if (dramcache_mod == NULL) 
    {
@@ -929,6 +931,8 @@ void dramcache_addVictim(unsigned int addr)
       // update the LRU info
       cache_access_block(dramcache_mod->dramcache_victim, set, way);
 
+      dramcache_mod->dramcache_victim->sets[set].blocks[way].access_cnt = block->access_cnt;
+
       return;
    }
    else
@@ -938,7 +942,7 @@ void dramcache_addVictim(unsigned int addr)
    }
 }
 
-unsigned char dramcache_hitVictim(unsigned int addr)
+struct cache_block_t * dramcache_hitVictim(unsigned int addr)
 {
    struct mod_t * dramcache_mod = mod_get_dramcache_mod();
 
@@ -952,7 +956,7 @@ unsigned char dramcache_hitVictim(unsigned int addr)
 
       if (dramcache_mod->dramcache_victim == NULL) 
       {
-         return 0;
+         return NULL;
       }
       ret = cache_find_block(dramcache_mod->dramcache_victim, addr, &set, &way, &state);
       if (ret) // hit victim cache. Need to remove it from victim cache. 
@@ -961,9 +965,10 @@ unsigned char dramcache_hitVictim(unsigned int addr)
          (dramcache_mod->dramcache_hit_victim)++;
          
          cache_set_block(dramcache_mod->dramcache_victim, set, way, tag, cache_block_invalid);
+         return &(dramcache_mod->dramcache_victim->sets[set].blocks[way]);
       }
 
-      return ret;
+      return NULL;
    }
    else
    {
@@ -971,7 +976,7 @@ unsigned char dramcache_hitVictim(unsigned int addr)
 
       if ((dramcache_mod->dramcache_victim_list->error_code) != LINKED_LIST_ERR_OK) // miss victim list
       {
-         return 0;
+         return NULL;
       }
 
       // hit victim list
@@ -980,10 +985,10 @@ unsigned char dramcache_hitVictim(unsigned int addr)
                      - dramcache_mod->dramcache_victim_list->current->cycle;
 
       linked_list_remove(dramcache_mod->dramcache_victim_list);
-      return 1;
+      return NULL;
    }
 
-   return 0;
+   return NULL;
 }
 
 void dramcache_report_dump(FILE * f)
@@ -1046,6 +1051,152 @@ void dramcache_victim_printstats(FILE * f)
    }
 }
 
+void dramcache_virtualset_create(struct mod_t * dramcache_mod, int num_ways)
+{
+   if (dramcache_mod == NULL) 
+   {
+      return;
+   }
+
+   dramcache_mod->dramcache_virtualsets = xcalloc(1, sizeof(struct virtualset_t));
+   dramcache_mod->dramcache_virtualsets->num_ways = num_ways;
+   dramcache_mod->dramcache_virtualsets->num_virtualsets = (dramcache_mod->cache->num_sets / num_ways) + 1;   
+   dramcache_mod->dramcache_virtualsets->access_cnt = xcalloc(dramcache_mod->dramcache_virtualsets->num_virtualsets, 
+                                                              sizeof(long long));
+   return;
+}
+
+void dramcache_virtualset_update(unsigned int addr)
+{
+   struct mod_t * dramcache_mod = mod_get_dramcache_mod();
+   int num_virtualset;
+   long long * access_ptr;
+   unsigned int offset;
+   int set,tag,way,state;
+
+   if (dramcache_mod == NULL) 
+   {
+      return;
+   }
+
+   // decode address to get set/tag
+   cache_decode_address(dramcache_mod->cache, addr, &set, &tag, &offset);
+
+   num_virtualset = set/(dramcache_mod->dramcache_virtualsets->num_ways);
+   if (num_virtualset >= dramcache_mod->dramcache_virtualsets->num_virtualsets) 
+   {
+      return;
+   }
+
+   // update virtual set access number
+   access_ptr = dramcache_mod->dramcache_virtualsets->access_cnt;
+   access_ptr[num_virtualset]++;
+   return;
+}
+
+long long dramcache_virtualset_access_cnt(unsigned int addr)
+{
+   struct mod_t * dramcache_mod = mod_get_dramcache_mod();
+   int num_virtualset;
+   long long * access_ptr;
+   unsigned int offset;
+   int set,tag,way,state;
+
+   if (dramcache_mod == NULL) 
+   {
+      return 0;
+   }
+
+   // decode address to get set/tag
+   cache_decode_address(dramcache_mod->cache, addr, &set, &tag, &offset);
+
+   num_virtualset = set/(dramcache_mod->dramcache_virtualsets->num_ways);
+   if (num_virtualset >= dramcache_mod->dramcache_virtualsets->num_virtualsets) 
+   {
+      return 0;
+   }
+
+   // update virtual set access number
+   access_ptr = dramcache_mod->dramcache_virtualsets->access_cnt;
+
+   return access_ptr[num_virtualset];
+}
+
+void dramcache_interval_buckets_update(long long interval)
+{
+   struct mod_t * dramcache_mod = mod_get_dramcache_mod();
+   long long * buckets_ptr;
+   int bucket_num;
+
+   if (dramcache_mod == NULL) 
+   {
+      return;
+   }
+
+   buckets_ptr = dramcache_mod->dramcache_virtualsets->interval_buckets;
+   bucket_num = (interval/10);
+   if (bucket_num >= 1000 ) 
+   {
+      bucket_num = 999;
+   }
+
+   buckets_ptr[bucket_num]++;
+   //mem_debug("  dramcache_interval_buckets_update: %d | %lld\n", bucket_num,interval);
+   return;
+}
+
+void dramcache_interval_buckets_printstats(FILE * f)
+{
+   struct mod_t * dramcache_mod = mod_get_dramcache_mod();
+   int iter;
+   int start_zero = -1;
+
+   if (dramcache_mod == NULL) 
+   {
+      return;
+   }
+   else if (dramcache_mod->dramcache_virtualsets == NULL) 
+   {
+      return;
+   }
+
+   fprintf(f, "=======================\n");
+
+   for (iter=0; iter<1000; iter++) 
+   {
+      if ((start_zero == -1) && 
+          (dramcache_mod->dramcache_virtualsets->interval_buckets[iter] == 0)) 
+      {
+         start_zero = iter;
+      }
+      else if (start_zero == -1) 
+      {
+         fprintf(f, "[%4d-%4d]: ", iter*10, iter*10+9);
+         fprintf(f, "%lld\n", dramcache_mod->dramcache_virtualsets->interval_buckets[iter]);
+      }
+      else if (dramcache_mod->dramcache_virtualsets->interval_buckets[iter] > 0) 
+      {
+         // for zero
+         fprintf(f, "[%4d-%4d]: 0\n", start_zero*10, iter*10-1);
+         // for none zero
+         fprintf(f, "[%4d-%4d]: ", iter*10, iter*10+9);
+         fprintf(f, "%lld\n", dramcache_mod->dramcache_virtualsets->interval_buckets[iter]);
+
+         start_zero = -1;
+      }
+      else if (iter == 999) 
+      {
+         fprintf(f, "[%4d-%4d]: 0\n", start_zero*10, iter*10+9);
+      }
+      
+   }
+
+
+   fprintf(f, "=======================\n\n");
+
+   return;
+}
+
 void dram_free(void)
 {
    struct mod_t * dram_mod = mod_get_dram_mod();
@@ -1104,6 +1255,12 @@ void dram_free(void)
       if (dramcache_mod->dramcache_victim != NULL) 
       {
          cache_free(dramcache_mod->dramcache_victim);
+      }
+
+      if (dramcache_mod->dramcache_virtualsets != NULL) 
+      {
+         free(dramcache_mod->dramcache_virtualsets->access_cnt);
+         free(dramcache_mod->dramcache_virtualsets);
       }
          
    }

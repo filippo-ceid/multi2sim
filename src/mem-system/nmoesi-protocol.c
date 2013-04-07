@@ -1019,6 +1019,7 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 	{
 		struct mod_port_t *port = stack->port;
 		struct dir_lock_t *dir_lock;
+		struct cache_block_t * hitVictim = NULL; // MY CODE
 
 		assert(stack->port);
 		mem_debug("  %lld %lld 0x%x %s find and lock port\n", esim_cycle, stack->id,
@@ -1046,6 +1047,7 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 		{
 			mod->accesses++;
 			if (stack->hit) mod->hits++;
+
                 }
 
                 if ( stack->isEvict ) // MY CODE
@@ -1210,8 +1212,8 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 			{
 			   if (stack->state)
 			   {
-			      dramcache_addVictim(mod->cache->sets[stack->set].blocks[stack->way].tag);
-			      dramcache_hitVictim(stack->tag);
+			      dramcache_addVictim(&(mod->cache->sets[stack->set].blocks[stack->way]));
+			      hitVictim = dramcache_hitVictim(stack->tag);
 			   }
 			}
 			//====== END OF MY CODE ======//
@@ -1221,10 +1223,42 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 		{
 			mod->cache->sets[stack->set].blocks[stack->way].hasHit = 1;
 		}
-		// for cache statistics
-		mod->cache->sets[stack->set].access++;
-
+		
 		//====== END OF MY CODE ======//
+		//========== MY CODE =========//
+		if ( (mod->kind == mod_kind_cache) 
+				    && (mod->DRAM != NULL) )
+		{
+		   if (stack->isEvict == 0)
+		   {
+		      long long interval;
+
+		      dramcache_virtualset_update(stack->addr);
+
+		      if (stack->hit) 
+		      {
+			 interval = dramcache_virtualset_access_cnt(stack->addr)
+				 - mod->cache->sets[stack->set].blocks[stack->way].access_cnt;
+			 dramcache_interval_buckets_update(interval);
+		      }
+		      else if (hitVictim) 
+		      {
+			 interval = dramcache_virtualset_access_cnt(stack->addr)
+				 - hitVictim->access_cnt;
+			 dramcache_interval_buckets_update(interval);
+		      }
+
+		      // update access_cnt for new allocated block
+		      if (! stack->hit) 
+		      {
+			 mod->cache->sets[stack->set].blocks[stack->way].access_cnt 
+			    = dramcache_virtualset_access_cnt(stack->addr);
+		      }
+		      
+		   }
+		}
+		//====== END OF MY CODE ======//
+
 
 		/* Entry is locked. Record the transient tag so that a subsequent lookup
 		 * detects that the block is being brought.
@@ -2058,6 +2092,7 @@ void mod_handler_nmoesi_read_request(int event, void *data)
                 if ( (stack->target_mod->kind == mod_kind_cache) 
                      && (stack->target_mod->DRAM != NULL) )
                 {
+		   // read hit
                    if ( mod_get_dramcache_info(stack->target_mod, stack->id, stack->addr) ) 
                    {
                       dramcache_add_request(stack->target_mod, stack, 0, tag_access_readhit);
@@ -2066,7 +2101,7 @@ void mod_handler_nmoesi_read_request(int event, void *data)
 		      // 	be established by tag request's callback function
 		      return;
                    }
-                   else
+                   else // read miss
                    {
                       
                       if (stack->target_mod->miss_dramcache_policy == normal) 

@@ -119,6 +119,14 @@ enum miss_handle_policy_t
       no_miss_latency,		// assume accessing the off-chip dram at the same time to hide latency
       no_miss_transaction	// assume perfect prediction. don't access dramcache at all.
 };
+struct virtualset_t
+{
+      int num_ways;
+      int num_virtualsets;
+      long long * access_cnt;
+
+      long long interval_buckets[1000];
+};
 //================ END OF MY CODE ===============//
 
 /* Memory module */
@@ -196,6 +204,7 @@ struct mod_t
 	struct linked_list_t * dramcache_victim_list;
 	struct cache_t * dramcache_victim;
 
+	struct virtualset_t * dramcache_virtualsets;
 	
 	/* MY Statistics */
 	long long doa_evictions;

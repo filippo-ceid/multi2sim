@@ -55,6 +55,7 @@ struct cache_block_t
 	enum cache_block_state_t state;
 //-------MY CODE---------//
 	unsigned char hasHit;
+	long long access_cnt;
 //----END OF MY CODE-----//
 };
 
@@ -63,9 +64,6 @@ struct cache_set_t
 	struct cache_block_t *way_head;
 	struct cache_block_t *way_tail;
 	struct cache_block_t *blocks;
-//-------MY CODE---------//
-	unsigned int access;
-//----END OF MY CODE-----//
 };
 
 struct cache_t

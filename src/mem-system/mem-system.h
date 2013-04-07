@@ -72,10 +72,16 @@ void dramcache_printstats(void);
 
 
 void dramcache_victimCreate(struct mod_t * dramcache_mod, unsigned int victimsize, unsigned int victim_assoc);
-void dramcache_addVictim(unsigned int addr);
-unsigned char dramcache_hitVictim(unsigned int addr);
+void dramcache_addVictim(struct cache_block_t *block);
+struct cache_block_t * dramcache_hitVictim(unsigned int addr);
 void dramcache_report_dump(FILE * f);
 void dramcache_victim_printstats(FILE * f);
+
+void dramcache_virtualset_create(struct mod_t * dramcache_mod, int num_ways);
+void dramcache_virtualset_update(unsigned int addr);
+long long dramcache_virtualset_access_cnt(unsigned int addr);
+void dramcache_interval_buckets_update(long long interval);
+void dramcache_interval_buckets_printstats(FILE * f);
 
 void dram_free(void);
 //============== END OF MY CODE ===============//
