@@ -1256,6 +1256,15 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 		      }
 		      
 		   }
+
+
+		   if ( stack->isWriteback )
+		   {
+		      
+			dramcache_add_request(mod, stack, 0, writeback_tag_access);
+			dramcache_add_request(mod, stack, 1, writeback_data_access);
+		   }   
+
 		}
 		//====== END OF MY CODE ======//
 
@@ -1526,17 +1535,7 @@ void mod_handler_nmoesi_evict(int event, void *data)
 		{
 			new_stack->isWriteback = 1;
 			new_stack->isEvict = 0;
-			//================== MY CODE ==================//
-			// DRAM cache: allocate new cache line
-			// event will be replied as usual. 
-			// But the cache_set_block time will be delayed
-			if ( (target_mod->kind == mod_kind_cache) 
-			     && (target_mod->DRAM != NULL) )
-			{
-			   dramcache_add_request(target_mod, stack, 0, writeback_tag_access);
-			   dramcache_add_request(target_mod, stack, 1, writeback_data_access);
-			}   
-		      //================ END OF MY CODE ==============//
+			
 		}
 		else
 		{

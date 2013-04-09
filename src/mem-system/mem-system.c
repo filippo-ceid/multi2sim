@@ -566,6 +566,10 @@ void dramcache_read_callback(unsigned id, unsigned long long address, unsigned l
    {
       // do nothing
       //dramcache_add_request(dramcache_mod, stack, 1, writeback_data_access);
+      mem_debug("  %lld %s (addr after mapping: 0x%x) writeback_tag_access-dram cache callback\n", 
+                esim_cycle, 
+                dramcache_mod->name,
+                address);
    }
    else 
    {
@@ -619,6 +623,10 @@ void dramcache_write_callback(unsigned id, unsigned long long address, unsigned 
    else if (access_type == writeback_data_access)  
    {
       // do nothing
+      mem_debug("  %lld %s (addr after mapping: 0x%x) writeback_data_access-dram cache callback\n", 
+                esim_cycle, 
+                dramcache_mod->name,
+                address);
    }
 
    return;
@@ -760,7 +768,11 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
       {
          new_addr = (row_cnt<<11)+(col_cnt*72);
          
-      }  
+      } 
+      else // for writeback tag & data access
+      {
+         new_addr = (row_cnt<<11)+(col_cnt*72);
+      }
    }
    else if (cache_assoc == 29) 
    {
@@ -778,6 +790,10 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
       {
          new_addr = (row_cnt<<11)+((col_cnt+3)*64);
       }  
+      else // for writeback tag & data access
+      {
+         new_addr = (row_cnt<<11)+((col_cnt+3)*64);
+      }
    }
 
    // add request to the global queue
