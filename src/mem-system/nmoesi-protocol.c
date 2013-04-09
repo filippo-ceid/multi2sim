@@ -1534,6 +1534,7 @@ void mod_handler_nmoesi_evict(int event, void *data)
 			     && (target_mod->DRAM != NULL) )
 			{
 			   dramcache_add_request(target_mod, stack, 0, writeback_tag_access);
+			   dramcache_add_request(target_mod, stack, 1, writeback_data_access);
 			}   
 		      //================ END OF MY CODE ==============//
 		}

@@ -564,7 +564,8 @@ void dramcache_read_callback(unsigned id, unsigned long long address, unsigned l
    }
    else if (access_type == writeback_tag_access) 
    {
-      dramcache_add_request(dramcache_mod, stack, 1, writeback_data_access);
+      // do nothing
+      //dramcache_add_request(dramcache_mod, stack, 1, writeback_data_access);
    }
    else 
    {
