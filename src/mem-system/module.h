@@ -218,6 +218,8 @@ struct mod_t
 	long long dramcache_request_read_data_access;
 	long long dramcache_request_writeback_tag_access;
 	long long dramcache_request_writeback_data_access;
+	long long dramcache_request_writeback_hit;
+	long long dramcache_request_writeback_miss;
 	long long dramcache_request_new_block_allocation;
 
 	long long dramcache_hit_victim;

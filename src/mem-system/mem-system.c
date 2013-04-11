@@ -837,6 +837,15 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
    else if (access_type == writeback_tag_access)
    {
       (dramcache_mod->dramcache_request_writeback_tag_access)++;
+
+      if (stack->hit) 
+      {
+         (dramcache_mod->dramcache_request_writeback_hit)++;
+      }
+      else
+      {
+         (dramcache_mod->dramcache_request_writeback_miss)++;
+      }
    }
 
    
@@ -1042,6 +1051,9 @@ void dramcache_report_dump(FILE * f)
    fprintf(f, "DRAMCache Tag Requests (WriteHit) = %lld\n", dramcache_mod->dramcache_request_tag_access_writehit);
    fprintf(f, "DRAMCache Tag Requests (WriteMiss) = %lld\n", dramcache_mod->dramcache_request_tag_access_writemiss);
    fprintf(f, "DRAMCache Tag Requests (Writeback) = %lld\n\n", dramcache_mod->dramcache_request_writeback_tag_access);
+
+   fprintf(f, "DRAMCache Writeback Hit = %lld\n", dramcache_mod->dramcache_request_writeback_hit);
+   fprintf(f, "DRAMCache Writeback Miss = %lld\n\n", dramcache_mod->dramcache_request_writeback_miss);
 
    fprintf(f, "DRAMCache Data Requests (Read) = %lld\n", dramcache_mod->dramcache_request_read_data_access);
    fprintf(f, "DRAMCache Data Requests (Write) = %lld\n", dramcache_mod->dramcache_request_write_data_access);

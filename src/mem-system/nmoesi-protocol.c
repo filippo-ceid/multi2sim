@@ -1042,11 +1042,18 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 				stack->tag, mod->name, stack->set, stack->way,
 				str_map_value(&cache_block_state_map, stack->state));
 
+		//====== MY CODE ======//
+		// Igonore blocking accesses
+		// because they are caused by downup reqs
+
 		/* Statistics */
                 if ( stack->isEvict==0 ) // MY CODE
 		{
-			mod->accesses++;
-			if (stack->hit) mod->hits++;
+                   if ( ! stack->blocking ) 
+		   {
+			   mod->accesses++;
+			   if (stack->hit) mod->hits++;
+                   }
 
                 }
 
@@ -1056,11 +1063,16 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
                 }
 		else if (stack->read)
 		{
+		   if ( ! stack->blocking ) 
+		   {
 			mod->reads++;
-			mod->effective_reads++;
-			stack->blocking ? mod->blocking_reads++ : mod->non_blocking_reads++;
 			if (stack->hit)
 				mod->read_hits++;
+			mod->effective_reads++;
+		   }
+			
+			stack->blocking ? mod->blocking_reads++ : mod->non_blocking_reads++;
+			
 		}
 		else if (stack->prefetch)
 		{
@@ -1079,9 +1091,13 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 			if (stack->isWriteback) // MY CODE
 				 mod->writebacks_from_up++;
              
-
-			mod->writes++;
-			mod->effective_writes++;
+			if ( ! stack->blocking ) 
+			{
+			   mod->writes++;
+			   mod->effective_writes++;
+			   if (stack->hit)
+				mod->write_hits++;
+			}
 			stack->blocking ? mod->blocking_writes++ : mod->non_blocking_writes++;
 
 			/* Increment witness variable when port is locked */
@@ -1091,8 +1107,7 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 				stack->witness_ptr = NULL;
 			}
 
-			if (stack->hit)
-				mod->write_hits++;
+			
 		}
 		else if (stack->message)
 		{
