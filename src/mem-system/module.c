@@ -764,6 +764,7 @@ void mod_dram_req_insert(struct mod_t *mod, struct mod_stack_t *stack,
    new_node->address = addr;
    new_node->iswrite = iswrite;
    new_node->access_type = access_type;
+   new_node->timeAdded = esim_cycle;
    new_node->next = NULL;
    
    // for new_block_allocation, the original event stack will be 
@@ -827,8 +828,34 @@ enum dramcache_type_t mod_dram_req_type(struct mod_t *mod,
       }
       ptr = ptr->next;
    }
-}
 
+   return none;
+}
+struct dram_req_list_t * mod_dram_req_find(struct mod_t *mod, 
+                                          unsigned int address, 
+                                          unsigned char iswrite)
+{
+   struct dram_req_list_t * ptr;
+
+   if (mod->dram_pending_request_head == NULL) 
+   {
+      return NULL;
+   }
+
+   ptr = mod->dram_pending_request_head;
+
+   while (ptr) 
+   {
+      if ((ptr->address == address)&&(ptr->iswrite == iswrite))
+      {
+
+         return ptr;
+      }
+      ptr = ptr->next;
+   }
+
+   return NULL;
+}
 // search with the given address in DRAM request queue. 
 // return the found node's stack and remove the node from queue.
 struct mod_stack_t * mod_dram_req_remove(struct mod_t *mod, unsigned int address, unsigned char iswrite)

@@ -101,6 +101,7 @@ struct dram_req_list_t
    unsigned int address;
    unsigned char iswrite; 
    enum dramcache_type_t access_type;
+   long long timeAdded;
 
    struct dram_req_list_t * prev;
    struct dram_req_list_t * next;
@@ -225,6 +226,12 @@ struct mod_t
 	long long dramcache_hit_victim;
 	long long dramcache_victim_reference_interval;
 
+
+	long long dramcache_request_write;
+	long long dramcache_request_read;
+	long long dramcache_request_write_latency;
+	long long dramcache_request_read_latency;
+
 	// Statistics for off-chip dram
 	long long dram_request_write;
 	long long dram_request_read;
@@ -332,6 +339,9 @@ void mod_dram_req_insert(struct mod_t *mod, struct mod_stack_t *stack,
 			 unsigned int addr, unsigned char iswrite,
 			 enum dramcache_type_t access_type);
 enum dramcache_type_t mod_dram_req_type(struct mod_t *mod, 
+                                          unsigned int address, 
+                                          unsigned char iswrite);
+struct dram_req_list_t * mod_dram_req_find(struct mod_t *mod, 
                                           unsigned int address, 
                                           unsigned char iswrite);
 struct mod_stack_t * mod_dram_req_remove(struct mod_t *mod, 

@@ -479,12 +479,21 @@ void dramcache_read_callback(unsigned id, unsigned long long address, unsigned l
    struct mod_stack_t * stack;
    struct mod_t * dramcache_mod;
    enum dramcache_type_t access_type;
+   struct dram_req_list_t * node;
+   long long timeAdded;
 
    unsigned int cache_assoc;
 
    dramcache_mod = mod_get_dramcache_mod();
+
+   node = mod_dram_req_find(dramcache_mod, address, 0);
+   timeAdded = node->timeAdded;
+
+   dramcache_mod->dramcache_request_read++;
+   dramcache_mod->dramcache_request_read_latency += (esim_cycle-timeAdded);
+
    // get the access type
-   access_type = mod_dram_req_type(dramcache_mod,address,0);
+   access_type = node->access_type;//mod_dram_req_type(dramcache_mod,address,0);
    // get the stack pointer and remove the request from queue
    stack = mod_dram_req_remove(dramcache_mod,address,0);
 
@@ -589,10 +598,19 @@ void dramcache_write_callback(unsigned id, unsigned long long address, unsigned 
    struct mod_stack_t * stack;
    struct mod_t * dramcache_mod;
    enum dramcache_type_t access_type;
+   struct dram_req_list_t * node;
+   long long timeAdded;
 
    dramcache_mod = mod_get_dramcache_mod();
+
+   node = mod_dram_req_find(dramcache_mod, address, 1);
+   timeAdded = node->timeAdded;
+
+   dramcache_mod->dramcache_request_write++;
+   dramcache_mod->dramcache_request_write_latency += (esim_cycle-timeAdded);
+
    // get the access type
-   access_type = mod_dram_req_type(dramcache_mod, address, 1);
+   access_type = node->access_type; //mod_dram_req_type(dramcache_mod, address, 1);
    // get the stack pointer and remove the request from queue
    stack = mod_dram_req_remove(dramcache_mod,address,1);
 
@@ -1021,7 +1039,9 @@ void dramcache_report_dump(FILE * f)
 {
    long long total_request;
    long long tag_request, data_request;
+   double avg_read,avg_write,avg_all;
    struct mod_t * dramcache_mod = mod_get_dramcache_mod();
+
    if (dramcache_mod == NULL) 
    {
       return;
@@ -1041,6 +1061,36 @@ void dramcache_report_dump(FILE * f)
          + data_request 
          + dramcache_mod->dramcache_request_new_block_allocation;
 
+   if (dramcache_mod->dramcache_request_read > 0) 
+   {
+      avg_read = (double)dramcache_mod->dramcache_request_read_latency/dramcache_mod->dramcache_request_read;
+   }
+   else
+   {
+      avg_read = 0;
+   }
+
+   if (dramcache_mod->dramcache_request_write > 0) 
+   {
+      avg_write = (double)dramcache_mod->dramcache_request_write_latency/dramcache_mod->dramcache_request_write;
+   }
+   else
+   {
+      avg_write = 0;
+   }
+
+   if ((dramcache_mod->dramcache_request_read + dramcache_mod->dramcache_request_write) > 0) 
+   {
+      avg_all = (double)(dramcache_mod->dramcache_request_read_latency+dramcache_mod->dramcache_request_write_latency)
+               /(dramcache_mod->dramcache_request_read + dramcache_mod->dramcache_request_write);
+   }
+   else
+   {
+      avg_all = 0;
+   }
+
+
+
    fprintf(f, "DRAMCache Requests = %lld\n", total_request);
    fprintf(f, "DRAMCache Tag Requests = %lld\n", tag_request);
    fprintf(f, "DRAMCache Data Requests = %lld\n", data_request);
@@ -1058,6 +1108,14 @@ void dramcache_report_dump(FILE * f)
    fprintf(f, "DRAMCache Data Requests (Read) = %lld\n", dramcache_mod->dramcache_request_read_data_access);
    fprintf(f, "DRAMCache Data Requests (Write) = %lld\n", dramcache_mod->dramcache_request_write_data_access);
    fprintf(f, "DRAMCache Data Requests (Writeback) = %lld\n\n", dramcache_mod->dramcache_request_writeback_data_access);
+
+   fprintf(f, "DRAMCache Read Requests = %lld\n", dramcache_mod->dramcache_request_read);
+   fprintf(f, "DRAMCache Read Average Latency = %.5g\n", avg_read);
+   fprintf(f, "DRAMCache Write Requests = %lld\n", dramcache_mod->dramcache_request_write);
+   fprintf(f, "DRAMCache Write Average Latency = %.5g\n", avg_write);
+   fprintf(f, "DRAMCache Total Requests = %lld\n", 
+           (dramcache_mod->dramcache_request_read + dramcache_mod->dramcache_request_write));
+   fprintf(f, "DRAMCache Total Average Latency = %.5g\n\n", avg_all);
    return;
 }
 
@@ -1071,7 +1129,7 @@ void dramcache_victim_printstats(FILE * f)
    fprintf(f, "DRAMCache Victim Hits = %lld\n", dramcache_mod->dramcache_hit_victim);
    if (dramcache_mod->dramcache_hit_victim) 
    {
-      fprintf(f, "DRAMCache Victim Average Reference Invertal = %.4g\n\n", 
+      fprintf(f, "DRAMCache Victim Average Reference Invertal = %.5g\n\n", 
              (double)dramcache_mod->dramcache_victim_reference_interval /dramcache_mod->dramcache_hit_victim);
    }
    else
