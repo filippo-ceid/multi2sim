@@ -1354,4 +1354,62 @@ void dram_free(void)
 
 }
 
+void dramcache_epoch_finegrained(void)
+{
+   struct mod_t * dramcache_mod = mod_get_dramcache_mod();
+   struct cache_t *cache;
+   char lognameA[256];
+   char lognameB[256];
+   FILE *fA, *fB;
+   unsigned int dirty_total = 0;
+   unsigned int dirty_local = 0; // 28 sets
+   unsigned int row_dirty_percentage[29]={0};
+   int set,way,i;
+
+   strcpy(lognameA, mem_report_file_name);
+   strcat(lognameA, ".dirtytime");
+   strcpy(lognameB, mem_report_file_name);
+   strcat(lognameB, ".dirtyspace");
+
+   fA = fopen(lognameA, "a");
+   if (!fA) return;
+   fB = fopen(lognameB, "a");
+   if (!fB) return;
+   if (!dramcache_mod) return;
+
+   // collecting statistics
+   cache = dramcache_mod->cache;
+   for (set = 0; set < cache->num_sets; set++)
+   {
+      for (way = 0; way < cache->assoc; way++)
+      {
+         if ( (cache->sets[set].blocks[way].state == cache_block_modified)||
+              (cache->sets[set].blocks[way].state == cache_block_owned))
+         {
+            dirty_total++;
+            dirty_local++;
+         }
+
+         if ( (set%28) == 27 ) 
+         {
+            row_dirty_percentage[dirty_local]++;
+            dirty_local = 0;
+         }
+      }
+   }
+
+
+   fprintf(fA, "%lld : %d\n", esim_cycle, dirty_total);
+   fprintf(fB,"%lld# ", esim_cycle);
+   for (i=0;i<29;i++) 
+   {
+      fprintf(fB, "- %d", row_dirty_percentage[i]);
+   }
+   fprintf(fB, "\n");
+
+   fclose(fA);
+   fclose(fB);
+}
+
+
 //====================END OF MY CODE========================//
