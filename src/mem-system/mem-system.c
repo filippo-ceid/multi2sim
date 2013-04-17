@@ -1384,6 +1384,8 @@ void dramcache_epoch_finegrained(void)
    FILE *fA, *fB;
    unsigned int dirty_total = 0;
    unsigned int dirty_local = 0; // 28 sets
+   unsigned int dirty_local2 = 0; // 16 sets
+   unsigned int dirty_total_compressed = 0; // 13 out of 16 sets are dirty 
    unsigned int row_dirty_percentage[29]={0};
    int set,way,i;
 
@@ -1409,6 +1411,7 @@ void dramcache_epoch_finegrained(void)
          {
             dirty_total++;
             dirty_local++;
+            dirty_local2++;
          }
 
          if ( (set%28) == 27 ) 
@@ -1416,11 +1419,20 @@ void dramcache_epoch_finegrained(void)
             row_dirty_percentage[dirty_local]++;
             dirty_local = 0;
          }
+
+         if ( (set%16) == 15 ) 
+         {
+            if (dirty_local2 >= 13) 
+            {
+               dirty_total_compressed += dirty_local2;
+            }
+            dirty_local2 = 0;
+         }
       }
    }
 
 
-   fprintf(fA, "%lld : %d\n", esim_cycle, dirty_total);
+   fprintf(fA, "%lld : %d : %.4g\n", esim_cycle, dirty_total, (double)dirty_total_compressed/dirty_total);
    fprintf(fB,"%lld# ", esim_cycle);
    for (i=0;i<29;i++) 
    {
