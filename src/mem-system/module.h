@@ -120,6 +120,11 @@ enum miss_handle_policy_t
       no_miss_latency,		// assume accessing the off-chip dram at the same time to hide latency
       no_miss_transaction	// assume perfect prediction. don't access dramcache at all.
 };
+enum dramcache_priority_t
+{
+      AllEqual = 0,
+      ReadFirst
+};
 struct virtualset_t
 {
       int num_ways;
@@ -197,6 +202,7 @@ struct mod_t
 
 	// type of miss_handle_policy
 	enum miss_handle_policy_t miss_dramcache_policy;
+	enum dramcache_priority_t dramcache_priority;
 
 	struct dram_req_list_t * dram_pending_request_head;
 	struct dram_req_list_t * dram_pending_request_tail;

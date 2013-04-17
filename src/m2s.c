@@ -1535,7 +1535,7 @@ void m2s_loop(void)
 			dram_update();
 			dramcache_update();
 
-                        if (( (esim_cycle+1)%1000000)==0) 
+                        if (( (esim_cycle)%1000000)==0) 
 			{
 			   dramcache_epoch_finegrained();
                         }

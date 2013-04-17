@@ -817,7 +817,28 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
    // add request to the global queue
    mod_dram_req_insert(dramcache_mod,stack,new_addr,iswrite, access_type);
    // send the request to DRAMSim2
-   memory_addtransaction(dramcache_mod->DRAM, iswrite, new_addr);
+   if (dramcache_mod->dramcache_priority == AllEqual) 
+   {
+      memory_addtransaction(dramcache_mod->DRAM, iswrite, new_addr);
+   }
+   else if (access_type == tag_access_readhit) 
+   {
+      memory_addtransaction_priority(dramcache_mod->DRAM, iswrite, new_addr, 5);
+   }
+   else if (access_type == tag_access_writehit)
+   {
+      memory_addtransaction_priority(dramcache_mod->DRAM, iswrite, new_addr, 4);
+   }
+   else if (access_type == tag_access_readmiss)
+   {
+      memory_addtransaction_priority(dramcache_mod->DRAM, iswrite, new_addr, 3);
+   }
+   else if (access_type == tag_access_writemiss)
+   {
+      memory_addtransaction_priority(dramcache_mod->DRAM, iswrite, new_addr, 2);
+   }
+   else
+      memory_addtransaction(dramcache_mod->DRAM, iswrite, new_addr);
 
    // statistics
    if (access_type == tag_access_readhit) 

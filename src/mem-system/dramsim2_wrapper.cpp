@@ -89,6 +89,17 @@ void memory_addtransaction(void* in_obj, unsigned char isWrite, unsigned long lo
 	else
 		obj->memory->addTransaction(false, addr);
 }
+
+void memory_addtransaction_priority(void* in_obj, unsigned char isWrite, unsigned long long addr, unsigned char priority)
+{
+	some_object * obj = (some_object*)in_obj;
+
+	if (isWrite==1)
+		obj->memory->addTransaction(true, addr, priority);
+	else
+		obj->memory->addTransaction(false, addr, priority);
+}
+
 void memory_setCPUClockSpeed(void* in_obj, unsigned long long cpuClkFreqHz)
 {
       some_object * obj = (some_object*)in_obj;
