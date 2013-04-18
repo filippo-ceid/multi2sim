@@ -242,6 +242,9 @@ struct mod_t
 	long long dram_request_write;
 	long long dram_request_read;
 
+	unsigned int dirty_num_peak;
+	unsigned int dirty_peak_compressed;
+	unsigned int dirty_peak_compressed2;
 	//====== END OF MY CODE =====//
 
 	/* Low and high memory modules */

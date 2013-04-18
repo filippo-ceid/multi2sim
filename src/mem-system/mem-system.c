@@ -1137,6 +1137,11 @@ void dramcache_report_dump(FILE * f)
    fprintf(f, "DRAMCache Total Requests = %lld\n", 
            (dramcache_mod->dramcache_request_read + dramcache_mod->dramcache_request_write));
    fprintf(f, "DRAMCache Total Average Latency = %.5g\n\n", avg_all);
+
+   fprintf(f, "DRAMCache Peak Dirty Lines = %lld (%.5g)\n", dramcache_mod->dirty_num_peak,
+           (double)dramcache_mod->dirty_num_peak/dramcache_mod->cache->num_sets);
+   fprintf(f,"  Compress with 16 sets = %.5g\n",(double)dramcache_mod->dirty_peak_compressed/dramcache_mod->dirty_num_peak);
+   fprintf(f,"  Compress with 28 sets = %.5g\n\n",(double)dramcache_mod->dirty_peak_compressed2/dramcache_mod->dirty_num_peak);
    return;
 }
 
@@ -1386,6 +1391,7 @@ void dramcache_epoch_finegrained(void)
    unsigned int dirty_local = 0; // 28 sets
    unsigned int dirty_local2 = 0; // 16 sets
    unsigned int dirty_total_compressed = 0; // 13 out of 16 sets are dirty 
+   unsigned int dirty_total_compressed2 = 0; // 23 out of 28 sets are dirty
    unsigned int row_dirty_percentage[29]={0};
    int set,way,i;
 
@@ -1417,6 +1423,10 @@ void dramcache_epoch_finegrained(void)
          if ( (set%28) == 27 ) 
          {
             row_dirty_percentage[dirty_local]++;
+            if (dirty_local >= 23) 
+            {
+               dirty_total_compressed2 += dirty_local;
+            }
             dirty_local = 0;
          }
 
@@ -1431,8 +1441,17 @@ void dramcache_epoch_finegrained(void)
       }
    }
 
+   if (dirty_total > dramcache_mod->dirty_num_peak) 
+   {
+      dramcache_mod->dirty_num_peak = dirty_total;
+      dramcache_mod->dirty_peak_compressed = dirty_total_compressed;
+      dramcache_mod->dirty_peak_compressed2 = dirty_total_compressed2;
+   }
 
-   fprintf(fA, "%lld : %d : %.4g\n", esim_cycle, dirty_total, (double)dirty_total_compressed/dirty_total);
+
+   fprintf(fA, "%lld : %d : %.4g : %.4g\n", esim_cycle, dirty_total, 
+           (double)dirty_total_compressed/dirty_total,
+           (double)dirty_total_compressed2/dirty_total);
    fprintf(fB,"%lld# ", esim_cycle);
    for (i=0;i<29;i++) 
    {
