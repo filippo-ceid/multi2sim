@@ -486,6 +486,7 @@ void dramcache_read_callback(unsigned id, unsigned long long address, unsigned l
 
    dramcache_mod = mod_get_dramcache_mod();
 
+   // get the corresponding node in request queue
    node = mod_dram_req_find(dramcache_mod, address, 0);
    timeAdded = node->timeAdded;
 
@@ -509,6 +510,7 @@ void dramcache_read_callback(unsigned id, unsigned long long address, unsigned l
                 stack->tag, 
                 dramcache_mod->name,
                 address);
+      // for write hit, also need to send a write request to update data
       if (cache_assoc == 1)  // alloy cache
       {
          dramcache_add_request(dramcache_mod, stack, 1, write_data_access);
@@ -527,12 +529,15 @@ void dramcache_read_callback(unsigned id, unsigned long long address, unsigned l
                 stack->tag, 
                 dramcache_mod->name,
                 address);
+      
       if (cache_assoc == 1) // alloy cache
       {
+         // for read hit, data is fetched together with tag.
          esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_REPLY, stack, 0);
       }
       else if (cache_assoc == 29) // gabriel's method
       {
+         // a new read requst to fetch data.
          dramcache_add_request(dramcache_mod, stack, 0, read_data_access);
       }
    }
@@ -544,9 +549,15 @@ void dramcache_read_callback(unsigned id, unsigned long long address, unsigned l
                 stack->tag, 
                 dramcache_mod->name,
                 address);
-      if (dramcache_mod->miss_dramcache_policy == normal) {
+      if (dramcache_mod->miss_dramcache_policy == normal) 
+      {
+         // for regular SAM, wait for the DRAM cache request 
+         // before access off-chip DRAM.
          esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_REPLY, stack, 0);
       }
+
+      // if miss_dramcache_policy is not normal, DRAM cache latency for miss 
+      // is ignored because it can be overlapped with off-chip DRAM latency.
    }
    else if (access_type == tag_access_writemiss)
    {
@@ -556,6 +567,8 @@ void dramcache_read_callback(unsigned id, unsigned long long address, unsigned l
                 stack->tag, 
                 dramcache_mod->name,
                 address);
+
+      // send out write request to update data
       dramcache_add_request(dramcache_mod, stack, 1, write_data_access);
       //esim_schedule_event(EV_MOD_NMOESI_WRITE_REQUEST_REPLY, stack, 0);
 
@@ -569,11 +582,15 @@ void dramcache_read_callback(unsigned id, unsigned long long address, unsigned l
                 stack->tag, 
                 dramcache_mod->name,
                 address);
+
+      // it only happens with Gabriel's method is used.
       esim_schedule_event(EV_MOD_NMOESI_READ_REQUEST_REPLY, stack, 0);
    }
    else if (access_type == writeback_tag_access) 
    {
       // do nothing
+      // write back is not on the critical path. so we ignore its latency in simulation
+      // 
       //dramcache_add_request(dramcache_mod, stack, 1, writeback_data_access);
       mem_debug("  %lld %s (addr after mapping: 0x%x) writeback_tag_access-dram cache callback\n", 
                 esim_cycle, 
@@ -633,6 +650,9 @@ void dramcache_write_callback(unsigned id, unsigned long long address, unsigned 
                 stack->tag, 
                 dramcache_mod->name,
                 address);
+      // Cache state has already been modified with the request happens. 
+      // It is a bit unrealistic. But easier to implement. 
+
       //cache_set_block(stack->target_mod->cache, stack->set, stack->way, stack->tag,
       //          stack->shared ? cache_block_shared : cache_block_exclusive);
 
@@ -641,6 +661,7 @@ void dramcache_write_callback(unsigned id, unsigned long long address, unsigned 
    else if (access_type == writeback_data_access)  
    {
       // do nothing
+      // write back requests are not on the critical path. Ignored their latency impact.
       mem_debug("  %lld %s (addr after mapping: 0x%x) writeback_data_access-dram cache callback\n", 
                 esim_cycle, 
                 dramcache_mod->name,
@@ -817,10 +838,13 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
    // add request to the global queue
    mod_dram_req_insert(dramcache_mod,stack,new_addr,iswrite, access_type);
    // send the request to DRAMSim2
-   if (dramcache_mod->dramcache_priority == AllEqual) 
+
+   // dramcache_priority was set by configuration file
+   if (dramcache_mod->dramcache_priority == AllEqual) // All requests have same priority
    {
       memory_addtransaction(dramcache_mod->DRAM, iswrite, new_addr);
    }
+   // Now we set different priority to different type of requests
    else if (access_type == tag_access_readhit) 
    {
       memory_addtransaction_priority(dramcache_mod->DRAM, iswrite, new_addr, 5);
@@ -837,8 +861,9 @@ void dramcache_add_request(struct mod_t * dramcache_mod,
    {
       memory_addtransaction_priority(dramcache_mod->DRAM, iswrite, new_addr, 2);
    }
-   else
-      memory_addtransaction(dramcache_mod->DRAM, iswrite, new_addr);
+   // lowest priority for write data access and new line allocation
+   else 
+      memory_addtransaction(dramcache_mod->DRAM, iswrite, new_addr); // default priority is 0
 
    // statistics
    if (access_type == tag_access_readhit) 
@@ -909,6 +934,8 @@ void dramcache_update(void)
    return;
 }
 
+// Call DRAMSim2 to print its stats in DRAMSim2 log file
+// will be called at the end of simulation
 void dramcache_printstats(void)
 {
    struct mod_t * dramcache_mod;
@@ -925,7 +952,8 @@ void dramcache_printstats(void)
    return;
 }
 
-// Victim cache for DRAM Cache
+//===============Victim cache for DRAM Cache===============//
+
 unsigned inline dramcache_log2(unsigned value)
 {
 	unsigned logbase2 = 0;
@@ -948,18 +976,19 @@ void dramcache_victimCreate(struct mod_t * dramcache_mod, unsigned int victimsiz
    {
       return;
    }
-   if (victimsize == 0) // Inifinite victim cache
+   if (victimsize == 0) // Infinite victim cache
    {
+      // a linked list is used for infinite victim cache
       dramcache_mod->dramcache_victim_list = linked_list_create();
       dramcache_mod->dramcache_victim = NULL;
       return;
    }
-   else
+   else // finite victim cache
    {
       dramcache_mod->dramcache_victim_list = NULL;
       // Finite victim cache
       // Size in MB: victimsize
-      // Assoc: fixed-32
+      // Assoc: victim_assoc
       log_assoc = dramcache_log2(victim_assoc);
       num_sets = victimsize<<(20 - 6 - log_assoc);
       dramcache_mod->dramcache_victim = cache_create("dramcache_victim", 
@@ -1055,7 +1084,10 @@ struct cache_block_t * dramcache_hitVictim(unsigned int addr)
 
    return NULL;
 }
+//===================================================//
 
+// report dump
+// will be called by memory system report function
 void dramcache_report_dump(FILE * f)
 {
    long long total_request;
@@ -1140,11 +1172,15 @@ void dramcache_report_dump(FILE * f)
 
    fprintf(f, "DRAMCache Peak Dirty Lines = %lld (%.5g)\n", dramcache_mod->dirty_num_peak,
            (double)dramcache_mod->dirty_num_peak/dramcache_mod->cache->num_sets);
-   fprintf(f,"  Compress with 16 sets = %.5g\n",(double)dramcache_mod->dirty_peak_compressed/dramcache_mod->dirty_num_peak);
-   fprintf(f,"  Compress with 28 sets = %.5g\n\n",(double)dramcache_mod->dirty_peak_compressed2/dramcache_mod->dirty_num_peak);
+   fprintf(f,"  Compress with 14 sets = %.5g\n",(double)dramcache_mod->dirty_peak_compressed_14/dramcache_mod->dirty_num_peak);
+   fprintf(f,"  Compress with 28 sets = %.5g\n\n",(double)dramcache_mod->dirty_peak_compressed_28/dramcache_mod->dirty_num_peak);
+   fprintf(f, "DRAMCache Peak Dirty Lines After Compression 14 = %lld\n", dramcache_mod->dirty_num_peak_after_compression_14);
+   fprintf(f, "DRAMCache Peak Dirty Lines After Compression 28 = %lld\n\n", dramcache_mod->dirty_num_peak_after_compression_28);
    return;
 }
 
+// report dump
+// will be called by memory system report function
 void dramcache_victim_printstats(FILE * f)
 {
    struct mod_t * dramcache_mod = mod_get_dramcache_mod();
@@ -1380,6 +1416,13 @@ void dram_free(void)
 
 }
 
+inline unsigned int calculate_compress(unsigned int total, unsigned int compress_num, unsigned int rate)
+{
+   return (total-compress_num+(compress_num/rate));
+}
+
+// collect dirty block information
+// will be called every 1M cycles
 void dramcache_epoch_finegrained(void)
 {
    struct mod_t * dramcache_mod = mod_get_dramcache_mod();
@@ -1388,22 +1431,23 @@ void dramcache_epoch_finegrained(void)
    char lognameB[256];
    FILE *fA, *fB;
    unsigned int dirty_total = 0;
-   unsigned int dirty_local = 0; // 28 sets
-   unsigned int dirty_local2 = 0; // 16 sets
-   unsigned int dirty_total_compressed = 0; // 13 out of 16 sets are dirty 
-   unsigned int dirty_total_compressed2 = 0; // 23 out of 28 sets are dirty
+   unsigned int dirty_local_28 = 0; // 28 sets
+   unsigned int dirty_local_14 = 0; // 14 sets
+   unsigned int dirty_total_compressed_14 = 0; // 12 out of 14 sets are dirty 
+   unsigned int dirty_total_compressed_28 = 0; // 23 out of 28 sets are dirty
    unsigned int row_dirty_percentage[29]={0};
+   unsigned int result;
    int set,way,i;
 
    strcpy(lognameA, mem_report_file_name);
    strcat(lognameA, ".dirtytime");
-   strcpy(lognameB, mem_report_file_name);
-   strcat(lognameB, ".dirtyspace");
+   //strcpy(lognameB, mem_report_file_name);
+   //strcat(lognameB, ".dirtyspace");
 
    fA = fopen(lognameA, "a");
    if (!fA) return;
-   fB = fopen(lognameB, "a");
-   if (!fB) return;
+   //fB = fopen(lognameB, "a");
+   //if (!fB) return;
    if (!dramcache_mod) return;
 
    // collecting statistics
@@ -1416,27 +1460,27 @@ void dramcache_epoch_finegrained(void)
               (cache->sets[set].blocks[way].state == cache_block_owned))
          {
             dirty_total++;
-            dirty_local++;
-            dirty_local2++;
+            dirty_local_28++;
+            dirty_local_14++;
          }
 
          if ( (set%28) == 27 ) 
          {
-            row_dirty_percentage[dirty_local]++;
-            if (dirty_local >= 23) 
+            row_dirty_percentage[dirty_local_28]++;
+            if (dirty_local_28 >= 23) 
             {
-               dirty_total_compressed2 += dirty_local;
+               dirty_total_compressed_28 += dirty_local_28;
             }
-            dirty_local = 0;
+            dirty_local_28 = 0;
          }
 
-         if ( (set%16) == 15 ) 
+         if ( (set%14) == 13 ) 
          {
-            if (dirty_local2 >= 13) 
+            if (dirty_local_14 >= 12) 
             {
-               dirty_total_compressed += dirty_local2;
+               dirty_total_compressed_14 += dirty_local_14;
             }
-            dirty_local2 = 0;
+            dirty_local_14 = 0;
          }
       }
    }
@@ -1444,23 +1488,33 @@ void dramcache_epoch_finegrained(void)
    if (dirty_total > dramcache_mod->dirty_num_peak) 
    {
       dramcache_mod->dirty_num_peak = dirty_total;
-      dramcache_mod->dirty_peak_compressed = dirty_total_compressed;
-      dramcache_mod->dirty_peak_compressed2 = dirty_total_compressed2;
+      dramcache_mod->dirty_peak_compressed_14 = dirty_total_compressed_14;
+      dramcache_mod->dirty_peak_compressed_28 = dirty_total_compressed_28;
+   }
+   result = calculate_compress(dirty_total,dirty_total_compressed_14,14);
+   if ( result > dramcache_mod->dirty_num_peak_after_compression_14 ) 
+   {
+      dramcache_mod->dirty_num_peak_after_compression_14 = result;
    }
 
+   result = calculate_compress(dirty_total,dirty_total_compressed_28,28);
+   if ( result > dramcache_mod->dirty_num_peak_after_compression_28 ) 
+   {
+      dramcache_mod->dirty_num_peak_after_compression_28 = result;
+   }
 
    fprintf(fA, "%lld : %d : %.4g : %.4g\n", esim_cycle, dirty_total, 
-           (double)dirty_total_compressed/dirty_total,
-           (double)dirty_total_compressed2/dirty_total);
-   fprintf(fB,"%lld# ", esim_cycle);
-   for (i=0;i<29;i++) 
-   {
-      fprintf(fB, "- %d", row_dirty_percentage[i]);
-   }
-   fprintf(fB, "\n");
+           (double)dirty_total_compressed_14/dirty_total,
+           (double)dirty_total_compressed_28/dirty_total);
+   //fprintf(fB,"%lld# ", esim_cycle);
+   //for (i=0;i<29;i++) 
+   //{
+   //   fprintf(fB, "- %d", row_dirty_percentage[i]);
+   //}
+   //fprintf(fB, "\n");
 
    fclose(fA);
-   fclose(fB);
+   //fclose(fB);
 }
 
 
