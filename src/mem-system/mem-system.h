@@ -85,6 +85,7 @@ void dramcache_interval_buckets_printstats(FILE * f);
 
 void dram_free(void);
 void dramcache_epoch_finegrained(void);
+void dramcache_epoch_coarsegrained(void);
 //============== END OF MY CODE ===============//
 #endif
 

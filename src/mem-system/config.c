@@ -509,6 +509,8 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
         char * logFileSuffix;
         int virtualset_size;
         char * dramcache_priority;
+        int finegrained_epoch;
+        int coarsegrained_epoch;
 
 	/* Cache parameters */
 	snprintf(buf, sizeof buf, "CacheGeometry %s",
@@ -550,6 +552,8 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
         logFileSuffix = config_read_string(config, section, "LogSuffix", "-cache");
         virtualset_size = config_read_int(config, section, "VirtualSet", 28);
         dramcache_priority = config_read_string(config, section, "Priority", "AllEqual");
+        finegrained_epoch = config_read_int(config, section, "EpochIntervalSmall", 1000000);
+        coarsegrained_epoch = config_read_int(config, section, "EpochIntervalLarge", 10000000);
 
 	/* Checks */
 	policy = str_map_string_case(&cache_policy_map, policy_str);
@@ -656,6 +660,9 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
               mod->dramcache_priority = AllEqual;
 
            dramcache_virtualset_create(mod, virtualset_size);
+
+           mod->epoch_interval_small = finegrained_epoch;
+           mod->epoch_interval_large = coarsegrained_epoch;
         }
         else
         {
@@ -664,6 +671,9 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
            mod->dram_pending_request_tail = NULL;
            mod->dramcache_victim_list = NULL;
            mod->dramcache_victim = NULL;
+
+           mod->epoch_interval_small = 0;
+           mod->epoch_interval_large = 0;
         }
 
 	/* Fill in prefetcher parameters */

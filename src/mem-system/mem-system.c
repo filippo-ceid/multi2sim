@@ -1517,5 +1517,172 @@ void dramcache_epoch_finegrained(void)
    //fclose(fB);
 }
 
+void dramcache_update_prior_stat(struct mod_t * dramcache_mod)
+{
+   if (dramcache_mod == NULL) 
+   {
+      return;
+   }
+
+   dramcache_mod->prior_dramcache_request_tag_access_readhit = 
+            dramcache_mod->dramcache_request_tag_access_readhit;
+   dramcache_mod->prior_dramcache_request_tag_access_writehit = 
+            dramcache_mod->dramcache_request_tag_access_writehit;
+   dramcache_mod->prior_dramcache_request_tag_access_readmiss = 
+            dramcache_mod->dramcache_request_tag_access_readmiss;
+   dramcache_mod->prior_dramcache_request_tag_access_writemiss = 
+            dramcache_mod->dramcache_request_tag_access_writemiss;
+   dramcache_mod->prior_dramcache_request_write_data_access = 
+            dramcache_mod->dramcache_request_write_data_access;
+   dramcache_mod->prior_dramcache_request_read_data_access = 
+            dramcache_mod->dramcache_request_read_data_access;
+   dramcache_mod->prior_dramcache_request_writeback_tag_access = 
+            dramcache_mod->dramcache_request_writeback_tag_access;
+   dramcache_mod->prior_dramcache_request_writeback_data_access = 
+            dramcache_mod->dramcache_request_writeback_data_access;
+   dramcache_mod->prior_dramcache_request_writeback_hit = 
+            dramcache_mod->dramcache_request_writeback_hit;
+   dramcache_mod->prior_dramcache_request_writeback_miss = 
+            dramcache_mod->dramcache_request_writeback_miss;
+   dramcache_mod->prior_dramcache_request_new_block_allocation = 
+            dramcache_mod->dramcache_request_new_block_allocation;
+
+   dramcache_mod->prior_dramcache_request_write = 
+            dramcache_mod->dramcache_request_write;
+   dramcache_mod->prior_dramcache_request_read = 
+            dramcache_mod->dramcache_request_read;
+   dramcache_mod->prior_dramcache_request_write_latency = 
+            dramcache_mod->dramcache_request_write_latency;
+   dramcache_mod->prior_dramcache_request_read_latency = 
+            dramcache_mod->dramcache_request_read_latency;
+
+
+   return;
+}
+
+void dramcache_epoch_coarsegrained(void)
+{
+   long long total_request;
+   long long tag_request, data_request;
+   long long prior_total_request;
+   long long prior_tag_request, prior_data_request;
+   double avg_read,avg_write,avg_all;
+   char logname[256];
+   FILE * f;
+   struct mod_t * dramcache_mod = mod_get_dramcache_mod();
+
+   if (dramcache_mod == NULL) 
+   {
+      return;
+   }
+
+   tag_request = dramcache_mod->dramcache_request_tag_access_readhit 
+         + dramcache_mod->dramcache_request_tag_access_writehit
+         + dramcache_mod->dramcache_request_tag_access_readmiss 
+         + dramcache_mod->dramcache_request_tag_access_writemiss
+         + dramcache_mod->dramcache_request_writeback_tag_access;
+
+   data_request = dramcache_mod->dramcache_request_read_data_access
+         + dramcache_mod->dramcache_request_write_data_access
+         + dramcache_mod->dramcache_request_writeback_data_access;
+
+   total_request = tag_request 
+         + data_request 
+         + dramcache_mod->dramcache_request_new_block_allocation;
+
+
+   prior_tag_request = dramcache_mod->prior_dramcache_request_tag_access_readhit 
+         + dramcache_mod->prior_dramcache_request_tag_access_writehit
+         + dramcache_mod->prior_dramcache_request_tag_access_readmiss 
+         + dramcache_mod->prior_dramcache_request_tag_access_writemiss
+         + dramcache_mod->prior_dramcache_request_writeback_tag_access;
+
+   prior_data_request = dramcache_mod->prior_dramcache_request_read_data_access
+         + dramcache_mod->prior_dramcache_request_write_data_access
+         + dramcache_mod->prior_dramcache_request_writeback_data_access;
+
+   prior_total_request = prior_tag_request 
+         + prior_data_request 
+         + dramcache_mod->prior_dramcache_request_new_block_allocation;
+
+
+   if (dramcache_mod->dramcache_request_read > dramcache_mod->prior_dramcache_request_read) 
+   {
+      avg_read = (dramcache_mod->dramcache_request_read_latency - dramcache_mod->prior_dramcache_request_read_latency)
+                  /(double)(dramcache_mod->dramcache_request_read - dramcache_mod->prior_dramcache_request_read);
+   }
+   else
+   {
+      avg_read = 0;
+   }
+
+   if (dramcache_mod->dramcache_request_write > dramcache_mod->prior_dramcache_request_write) 
+   {
+      avg_write = (dramcache_mod->dramcache_request_write_latency - dramcache_mod->prior_dramcache_request_write_latency)
+                  /(double)(dramcache_mod->dramcache_request_write - dramcache_mod->prior_dramcache_request_write);
+   }
+   else
+   {
+      avg_write = 0;
+   }
+
+   if ((dramcache_mod->dramcache_request_read + dramcache_mod->dramcache_request_write) 
+       > (dramcache_mod->prior_dramcache_request_read + dramcache_mod->prior_dramcache_request_write)) 
+   {
+      avg_all = (dramcache_mod->dramcache_request_read_latency + dramcache_mod->dramcache_request_write_latency
+                 - dramcache_mod->prior_dramcache_request_read_latency - dramcache_mod->prior_dramcache_request_write_latency)
+               /(double)(dramcache_mod->dramcache_request_read + dramcache_mod->dramcache_request_write
+                 - dramcache_mod->prior_dramcache_request_read - dramcache_mod->prior_dramcache_request_write);
+   }
+   else
+   {
+      avg_all = 0;
+   }
+
+   strcpy(logname, mem_report_file_name);
+   strcat(logname, ".coarse-epoch");
+   f = fopen(logname, "a");
+   if (!f) return;
+
+   fprintf(f, "Cycle   = %lld\n", esim_cycle);
+   fprintf(f, "Tot Req = %lld\n", total_request-prior_total_request);
+   fprintf(f, "Tag Req = %lld\n", tag_request-prior_tag_request);
+   fprintf(f, "Dat Req = %lld\n", data_request-prior_data_request);
+   fprintf(f, "Alloc   = %lld\n", dramcache_mod->dramcache_request_new_block_allocation
+                                 - dramcache_mod->prior_dramcache_request_new_block_allocation);
+
+   fprintf(f, "Tag (ReadHit)  = %lld\n", dramcache_mod->dramcache_request_tag_access_readhit
+                                 - dramcache_mod->prior_dramcache_request_tag_access_readhit);
+   fprintf(f, "Tag (ReadMiss) = %lld\n", dramcache_mod->dramcache_request_tag_access_readmiss
+                                 - dramcache_mod->prior_dramcache_request_tag_access_readmiss);
+   fprintf(f, "Tag (WriteHit) = %lld\n", dramcache_mod->dramcache_request_tag_access_writehit
+                                 - dramcache_mod->prior_dramcache_request_tag_access_writehit);
+   fprintf(f, "Tag (WriteMiss)= %lld\n", dramcache_mod->dramcache_request_tag_access_writemiss
+                                 - dramcache_mod->prior_dramcache_request_tag_access_writemiss);
+   fprintf(f, "Tag (Writeback)= %lld\n", dramcache_mod->dramcache_request_writeback_tag_access
+                                 - dramcache_mod->prior_dramcache_request_writeback_tag_access);
+
+   fprintf(f, "Data (RD) = %lld\n", dramcache_mod->dramcache_request_read_data_access
+                                 - dramcache_mod->prior_dramcache_request_read_data_access);
+   fprintf(f, "Data (WR) = %lld\n", dramcache_mod->dramcache_request_write_data_access
+                                 - dramcache_mod->prior_dramcache_request_write_data_access);
+   fprintf(f, "Data (WB) = %lld\n", dramcache_mod->dramcache_request_writeback_data_access
+                                 - dramcache_mod->prior_dramcache_request_writeback_data_access);
+
+   fprintf(f, "Read Req     = %lld\n", dramcache_mod->dramcache_request_read
+                                 - dramcache_mod->prior_dramcache_request_read);
+   fprintf(f, "Read Latency = %.5g\n", avg_read);
+   fprintf(f, "Write Req    = %lld\n", dramcache_mod->dramcache_request_write
+                                 - dramcache_mod->prior_dramcache_request_write);
+   fprintf(f, "Write Latency= %.5g\n", avg_write);
+   fprintf(f, "Total Req    = %lld\n", 
+           (dramcache_mod->dramcache_request_read + dramcache_mod->dramcache_request_write
+            - dramcache_mod->prior_dramcache_request_read - dramcache_mod->prior_dramcache_request_write));
+   fprintf(f, "Total Latency= %.5g\n\n", avg_all);
+
+   fclose(f);
+
+   dramcache_update_prior_stat(dramcache_mod);
+}
 
 //====================END OF MY CODE========================//

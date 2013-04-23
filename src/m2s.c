@@ -1532,13 +1532,25 @@ void m2s_loop(void)
 		// push dramsim2 forward by 1 cpu cycle
 		if (timing_running)
 		{
-			dram_update();
-			dramcache_update();
+			struct mod_t * dramcache_mod;
 
-                        if (( (esim_cycle)%1000000)==0) 
+			dram_update();
+
+			dramcache_mod = mod_get_dramcache_mod();
+			if (dramcache_mod != NULL && dramcache_mod->DRAM != NULL)
 			{
-			   dramcache_epoch_finegrained();
-                        }
+			   dramcache_update();
+
+			   if (( (esim_cycle)%dramcache_mod->epoch_interval_small)==0) 
+			   {
+			      dramcache_epoch_finegrained();
+			      
+			   }
+			   if (( (esim_cycle)%dramcache_mod->epoch_interval_large)==0) 
+			   {
+			      dramcache_epoch_coarsegrained();
+			   }
+			}
 		}
 		//============= END OF MY CODE ===========//
 

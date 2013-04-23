@@ -200,6 +200,8 @@ struct mod_t
 	/* DRAM */
 	void * DRAM;
 
+	int epoch_interval_small;
+	int epoch_interval_large;
 	// type of miss_handle_policy
 	enum miss_handle_policy_t miss_dramcache_policy;
 	enum dramcache_priority_t dramcache_priority;
@@ -238,10 +240,29 @@ struct mod_t
 	long long dramcache_request_write_latency;
 	long long dramcache_request_read_latency;
 
+
+	long long prior_dramcache_request_tag_access_readhit;
+	long long prior_dramcache_request_tag_access_writehit;
+	long long prior_dramcache_request_tag_access_readmiss;
+	long long prior_dramcache_request_tag_access_writemiss;
+	long long prior_dramcache_request_write_data_access;
+	long long prior_dramcache_request_read_data_access;
+	long long prior_dramcache_request_writeback_tag_access;
+	long long prior_dramcache_request_writeback_data_access;
+	long long prior_dramcache_request_writeback_hit;
+	long long prior_dramcache_request_writeback_miss;
+	long long prior_dramcache_request_new_block_allocation;
+
+	long long prior_dramcache_request_write;
+	long long prior_dramcache_request_read;
+	long long prior_dramcache_request_write_latency;
+	long long prior_dramcache_request_read_latency;
+
 	// Statistics for off-chip dram
 	long long dram_request_write;
 	long long dram_request_read;
 
+	// Statistics for dirty blocks
 	unsigned int dirty_num_peak;
 	unsigned int dirty_num_peak_after_compression_14;
 	unsigned int dirty_num_peak_after_compression_28;
