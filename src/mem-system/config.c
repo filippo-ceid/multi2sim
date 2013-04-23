@@ -511,6 +511,8 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
         char * dramcache_priority;
         int finegrained_epoch;
         int coarsegrained_epoch;
+        int enable_dirtyblock_trace;
+        char * dirtyblock_trace_name;
 
 	/* Cache parameters */
 	snprintf(buf, sizeof buf, "CacheGeometry %s",
@@ -554,6 +556,9 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
         dramcache_priority = config_read_string(config, section, "Priority", "AllEqual");
         finegrained_epoch = config_read_int(config, section, "EpochIntervalSmall", 1000000);
         coarsegrained_epoch = config_read_int(config, section, "EpochIntervalLarge", 10000000);
+
+        enable_dirtyblock_trace = config_read_bool(config, section, "EnableDirtyBlockTrace", 0);
+        dirtyblock_trace_name = config_read_string(config, section, "DirtyBlockTraceName", "dirtyblock.trace");
 
 	/* Checks */
 	policy = str_map_string_case(&cache_policy_map, policy_str);
@@ -663,6 +668,12 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
 
            mod->epoch_interval_small = finegrained_epoch;
            mod->epoch_interval_large = coarsegrained_epoch;
+
+           mod->enable_dirtyblock_trace = enable_dirtyblock_trace;
+           if (enable_dirtyblock_trace) 
+           {
+              mod->trace_ptr = fopen(dirtyblock_trace_name, "w");
+           }
         }
         else
         {

@@ -86,6 +86,8 @@ void dramcache_interval_buckets_printstats(FILE * f);
 void dram_free(void);
 void dramcache_epoch_finegrained(void);
 void dramcache_epoch_coarsegrained(void);
+
+void dirtyblock_trace_update(int tag, int isinsertion);
 //============== END OF MY CODE ===============//
 #endif
 

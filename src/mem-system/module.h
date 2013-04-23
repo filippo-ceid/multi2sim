@@ -202,6 +202,10 @@ struct mod_t
 
 	int epoch_interval_small;
 	int epoch_interval_large;
+
+	int enable_dirtyblock_trace;
+	FILE * trace_ptr;
+
 	// type of miss_handle_policy
 	enum miss_handle_policy_t miss_dramcache_policy;
 	enum dramcache_priority_t dramcache_priority;

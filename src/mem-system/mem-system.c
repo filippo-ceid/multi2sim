@@ -1411,7 +1411,11 @@ void dram_free(void)
          free(dramcache_mod->dramcache_virtualsets->access_cnt);
          free(dramcache_mod->dramcache_virtualsets);
       }
-         
+      
+      if (dramcache_mod->trace_ptr) 
+      {
+         fclose(dramcache_mod->trace_ptr);
+      }
    }
 
 }
@@ -1683,6 +1687,31 @@ void dramcache_epoch_coarsegrained(void)
    fclose(f);
 
    dramcache_update_prior_stat(dramcache_mod);
+}
+
+
+void dirtyblock_trace_update(int tag, int isinsertion)
+{
+   struct mod_t * dramcache_mod = mod_get_dramcache_mod();
+
+   if (dramcache_mod == NULL) 
+   {
+      return;
+   }
+   if (dramcache_mod->trace_ptr == NULL) 
+   {
+      return;
+   }
+   if (isinsertion == 0) 
+   {
+      fprintf(dramcache_mod->trace_ptr, "%2d ", 0);
+   }
+   else 
+   {
+      fprintf(dramcache_mod->trace_ptr, "%2d ", 1);
+   }
+
+   fprintf(dramcache_mod->trace_ptr, "%d\n", tag);
 }
 
 //====================END OF MY CODE========================//

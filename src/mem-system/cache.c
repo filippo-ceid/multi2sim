@@ -314,6 +314,28 @@ void cache_set_block(struct cache_t *cache, int set, int way, int tag, int state
 		cache_update_waylist(&cache->sets[set],
 			&cache->sets[set].blocks[way],
 			cache_waylist_head);
+	//=========== MY CODE ===========//
+	struct mod_t * dramcache_mod = mod_get_dramcache_mod();
+	if ( (dramcache_mod != NULL) && (cache == dramcache_mod->cache))
+	{
+           if ((cache->sets[set].blocks[way].tag != tag) ||
+	       (cache->sets[set].blocks[way].state != state) ) 
+	   {
+              if ( (state == cache_block_modified) ||
+		   (state == cache_block_owned) )
+	      {
+		 dirtyblock_trace_update(tag, 1);
+              }
+
+              if ( (cache->sets[set].blocks[way].state == cache_block_modified) ||
+		   (cache->sets[set].blocks[way].state == cache_block_owned) ) 
+	      {
+		 dirtyblock_trace_update(cache->sets[set].blocks[way].tag, 0);
+              }
+           }
+	}
+	//======= END OF MY CODE ========//
+
 	cache->sets[set].blocks[way].tag = tag;
 	cache->sets[set].blocks[way].state = state;
 }
