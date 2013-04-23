@@ -1714,4 +1714,54 @@ void dirtyblock_trace_update(int tag, int isinsertion)
    fprintf(dramcache_mod->trace_ptr, "%d\n", tag);
 }
 
+void fetch_benchmark_name(char * input, char * output)
+{
+   int i;
+   int start_pos;
+   int end_pos;
+
+   for (i=0;i<256;i++) 
+   {
+      if (input[i] == '\0') 
+      {
+         break;
+      }
+
+      if (input[i] == '/') 
+      {
+         start_pos=i+1;
+      }
+   }
+
+   for (i=start_pos;i<256;i++) 
+   {
+      if (input[i] == '\0') 
+      {
+         break;
+      }
+
+      if (input[i] == '.') 
+      {
+         end_pos=i-1;
+         break;
+      }
+   }
+
+   if (end_pos<start_pos) 
+   {
+      end_pos = start_pos;
+   }
+
+   for (i=0;i<256;i++) 
+   {
+      output[i] = input[start_pos+i];
+      if ( (i+start_pos) == end_pos ) 
+      {
+         output[i+1]='\0';
+         break;
+      }
+   }
+
+   return;
+}
 //====================END OF MY CODE========================//

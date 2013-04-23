@@ -88,6 +88,7 @@ void dramcache_epoch_finegrained(void);
 void dramcache_epoch_coarsegrained(void);
 
 void dirtyblock_trace_update(int tag, int isinsertion);
+void fetch_benchmark_name(char * input, char * output);
 //============== END OF MY CODE ===============//
 #endif
 

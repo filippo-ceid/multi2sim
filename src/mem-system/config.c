@@ -512,7 +512,7 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
         int finegrained_epoch;
         int coarsegrained_epoch;
         int enable_dirtyblock_trace;
-        char * dirtyblock_trace_name;
+        char * dirtyblock_trace_path;
 
 	/* Cache parameters */
 	snprintf(buf, sizeof buf, "CacheGeometry %s",
@@ -558,7 +558,7 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
         coarsegrained_epoch = config_read_int(config, section, "EpochIntervalLarge", 10000000);
 
         enable_dirtyblock_trace = config_read_bool(config, section, "EnableDirtyBlockTrace", 0);
-        dirtyblock_trace_name = config_read_string(config, section, "DirtyBlockTraceName", "dirtyblock.trace");
+        dirtyblock_trace_path = config_read_string(config, section, "DirtyBlockTracePath", "./");
 
 	/* Checks */
 	policy = str_map_string_case(&cache_policy_map, policy_str);
@@ -672,7 +672,14 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
            mod->enable_dirtyblock_trace = enable_dirtyblock_trace;
            if (enable_dirtyblock_trace) 
            {
-              mod->trace_ptr = fopen(dirtyblock_trace_name, "w");
+              char trace_name[256];
+              char trace_complete_path[512];
+              fetch_benchmark_name(mem_report_file_name, trace_name);
+              strcpy(trace_complete_path, dirtyblock_trace_path);
+              strcat(trace_complete_path, "/");
+              strcat(trace_complete_path, trace_name);
+              strcat(trace_complete_path, ".trace");
+              mod->trace_ptr = fopen(trace_complete_path, "w");
            }
         }
         else
