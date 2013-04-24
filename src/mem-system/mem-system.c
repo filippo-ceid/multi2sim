@@ -1702,15 +1702,18 @@ void dirtyblock_trace_update(int tag, int isinsertion)
    {
       return;
    }
-   if (isinsertion == 0) 
+   if (isinsertion == 0) // dirty block eviction
    {
       fprintf(dramcache_mod->trace_ptr, "%2d ", 0);
    }
-   else 
+   else if (isinsertion == 1) // dirty block insertion
    {
       fprintf(dramcache_mod->trace_ptr, "%2d ", 1);
    }
-
+   else if (isinsertion == 2) // cache miss
+   {
+      fprintf(dramcache_mod->trace_ptr, "%2d ", 2);
+   }
    fprintf(dramcache_mod->trace_ptr, "%d\n", tag);
 }
 

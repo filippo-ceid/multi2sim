@@ -1067,7 +1067,17 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 		   {
 			mod->reads++;
 			if (stack->hit)
+			{
 				mod->read_hits++;
+			}
+			else 
+			{
+                           if ( (mod->kind == mod_kind_cache) 
+				    && (mod->DRAM != NULL) )
+			   {
+			      dirtyblock_trace_update(stack->tag, 2);
+			   }
+			}
 			mod->effective_reads++;
 		   }
 			
@@ -1329,6 +1339,7 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
                 {
                    mod_insert_dramcache_info(stack->mod, stack->id, stack->hit==0 ? 0 : 1, stack->addr);
                    //return;
+
                 }
 		//=============== END OF MY CODE ==============//
 
