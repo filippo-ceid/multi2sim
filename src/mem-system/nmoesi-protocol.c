@@ -1053,6 +1053,21 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 		   {
 			   mod->accesses++;
 			   if (stack->hit) mod->hits++;
+                           if ( (mod->kind == mod_kind_cache) 
+				    && (mod->DRAM != NULL) ) 
+			   {
+			      if (mod->enable_dramcache_trace) 
+			      {
+                                 if (stack->read) 
+				 {
+				    dramcache_trace_update(stack->tag, 0);
+                                 }
+				 else
+				 {
+				    dramcache_trace_update(stack->tag, 1);
+				 }
+			      }
+                           }
                    }
 
                 }

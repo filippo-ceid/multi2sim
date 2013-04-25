@@ -205,6 +205,8 @@ struct mod_t
 
 	int enable_dirtyblock_trace;
 	FILE * trace_ptr;
+	int enable_dramcache_trace;
+	FILE * dramcache_trace_ptr;
 
 	// type of miss_handle_policy
 	enum miss_handle_policy_t miss_dramcache_policy;
@@ -220,8 +222,9 @@ struct mod_t
 	struct virtualset_t * dramcache_virtualsets;
 	
 	// interval profiling
-	unsigned int * last_interval_table;
+	struct cache_t * last_interval_table;
 	unsigned int last_interval_table_size;
+	long long last_interval_table_conflicts;
 	long long total_delta_value;
 	long long total_delta_cnt;
 		

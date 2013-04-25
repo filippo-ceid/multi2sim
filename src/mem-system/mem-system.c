@@ -1179,10 +1179,11 @@ void dramcache_report_dump(FILE * f)
 
    if (dramcache_mod->total_delta_cnt != 0) 
    {
-      fprintf(f, "DRAMCache Average Delta (with Last Interval) = %.5g\n\n", 
+      fprintf(f, "DRAMCache Average Delta (with Last Interval) = %.5g\n", 
               dramcache_mod->total_delta_value/(double)dramcache_mod->total_delta_cnt);
       fprintf(f, "  Total Delta Value = %lld\n", dramcache_mod->total_delta_value);
       fprintf(f, "  Total Delta Cnt = %lld\n", dramcache_mod->total_delta_cnt);
+      fprintf(f, "  Total Conflicts = %lld\n\n", dramcache_mod->last_interval_table_conflicts);
    }
    return;
 }
@@ -1357,9 +1358,8 @@ void dramcache_interval_buckets_printstats(FILE * f)
 void dramcache_interval_profiling(int addr, long long interval)
 {
    struct mod_t * dramcache_mod = mod_get_dramcache_mod();
-   unsigned int cache_block_num;
-   unsigned int table_entry;
    int delta;
+   int set,tag,offset,way;
 
    if (dramcache_mod==NULL) 
    {
@@ -1374,14 +1374,23 @@ void dramcache_interval_profiling(int addr, long long interval)
       return;
    }
 
-   cache_block_num = addr;
-   cache_block_num = cache_block_num>>6;
-
-   table_entry = cache_block_num%dramcache_mod->last_interval_table_size;
-
-   if (dramcache_mod->last_interval_table[table_entry] != 0) 
+   // decode address to get set/tag
+   cache_decode_address(dramcache_mod->last_interval_table, addr, &set, &tag, &offset);
+   // find out the way to insert
+   way = cache_replace_block(dramcache_mod->last_interval_table, set);
+   if (dramcache_mod->last_interval_table->sets[set].blocks[way].state != cache_block_invalid) 
    {
-      delta = interval - dramcache_mod->last_interval_table[table_entry];
+      dramcache_mod->last_interval_table_conflicts++;
+   }
+   // insert the block
+   cache_set_block(dramcache_mod->last_interval_table, set, way, tag, cache_block_modified);
+   // update the LRU info
+   cache_access_block(dramcache_mod->last_interval_table, set, way);
+
+
+   if (dramcache_mod->last_interval_table->sets[set].blocks[way].access_cnt != 0) 
+   {
+      delta = interval - dramcache_mod->last_interval_table->sets[set].blocks[way].access_cnt;
       if (delta < 0) 
       {
          delta = -delta;
@@ -1393,8 +1402,7 @@ void dramcache_interval_profiling(int addr, long long interval)
    }
 
    // update last interval table
-   dramcache_mod->last_interval_table[table_entry] = interval;
-
+   dramcache_mod->last_interval_table->sets[set].blocks[way].access_cnt = interval;
 
    return;
 }
@@ -1471,7 +1479,11 @@ void dram_free(void)
       }
       if (dramcache_mod->last_interval_table) 
       {
-         free(dramcache_mod->last_interval_table);
+         cache_free(dramcache_mod->last_interval_table);
+      }
+      if (dramcache_mod->dramcache_trace_ptr) 
+      {
+         fclose(dramcache_mod->dramcache_trace_ptr);
       }
    }
 
@@ -1746,6 +1758,29 @@ void dramcache_epoch_coarsegrained(void)
    dramcache_update_prior_stat(dramcache_mod);
 }
 
+void dramcache_trace_update(int tag, int isread)
+{
+   struct mod_t * dramcache_mod = mod_get_dramcache_mod();
+
+   if (dramcache_mod == NULL) 
+   {
+      return;
+   }
+   if (dramcache_mod->dramcache_trace_ptr == NULL) 
+   {
+      return;
+   }
+   if (isread == 0) // read
+   {
+      fprintf(dramcache_mod->dramcache_trace_ptr, "%2d ", 0);
+   }
+   else if (isread == 1) // write
+   {
+      fprintf(dramcache_mod->dramcache_trace_ptr, "%2d ", 1);
+   }
+   
+   fprintf(dramcache_mod->dramcache_trace_ptr, "%d\n", tag);
+}
 
 void dirtyblock_trace_update(int tag, int isinsertion)
 {

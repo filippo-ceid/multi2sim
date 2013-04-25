@@ -88,6 +88,7 @@ void dram_free(void);
 void dramcache_epoch_finegrained(void);
 void dramcache_epoch_coarsegrained(void);
 
+void dramcache_trace_update(int tag, int isread);
 void dirtyblock_trace_update(int tag, int isinsertion);
 void fetch_benchmark_name(char * input, char * output);
 

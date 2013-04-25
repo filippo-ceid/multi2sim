@@ -512,7 +512,9 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
         int finegrained_epoch;
         int coarsegrained_epoch;
         int enable_dirtyblock_trace;
+        int enable_dramcache_trace;
         char * dirtyblock_trace_path;
+        char * dramcache_trace_path;
         int last_interval_table_size;
 
 	/* Cache parameters */
@@ -560,6 +562,9 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
 
         enable_dirtyblock_trace = config_read_bool(config, section, "EnableDirtyBlockTrace", 0);
         dirtyblock_trace_path = config_read_string(config, section, "DirtyBlockTracePath", "./");
+
+        enable_dramcache_trace = config_read_bool(config, section, "EnableDRAMCacheTrace", 0);
+        dramcache_trace_path = config_read_string(config, section, "DRAMCacheTracePath", "./");
 
         last_interval_table_size = config_read_int(config, section, "IntervalTableSize", 0);
 
@@ -685,8 +690,23 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
               mod->trace_ptr = fopen(trace_complete_path, "w");
            }
 
+           mod->enable_dramcache_trace = enable_dramcache_trace;
+           if (enable_dramcache_trace) 
+           {
+              char trace_name[256];
+              char trace_complete_path[512];
+              fetch_benchmark_name(mem_report_file_name, trace_name);
+              strcpy(trace_complete_path, dramcache_trace_path);
+              strcat(trace_complete_path, "/");
+              strcat(trace_complete_path, trace_name);
+              strcat(trace_complete_path, ".dramcache_trace");
+              mod->dramcache_trace_ptr = fopen(trace_complete_path, "w");
+           }
+
            mod->last_interval_table_size = last_interval_table_size;
-           mod->last_interval_table = xcalloc(last_interval_table_size, sizeof(unsigned int));
+           mod->last_interval_table = cache_create("last_interval_table", 
+                                       last_interval_table_size/16, 64, 16, cache_policy_lru);
+           //xcalloc(last_interval_table_size, sizeof(unsigned int));
         }
         else
         {
@@ -700,6 +720,8 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
            mod->epoch_interval_large = 0;
 
            mod->trace_ptr = NULL;
+           mod->dramcache_trace_ptr = NULL;
+           mod->enable_dramcache_trace = 0;
 
            mod->last_interval_table_size = 0;
            mod->last_interval_table = NULL;
