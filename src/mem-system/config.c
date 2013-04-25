@@ -513,6 +513,7 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
         int coarsegrained_epoch;
         int enable_dirtyblock_trace;
         char * dirtyblock_trace_path;
+        int last_interval_table_size;
 
 	/* Cache parameters */
 	snprintf(buf, sizeof buf, "CacheGeometry %s",
@@ -559,6 +560,8 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
 
         enable_dirtyblock_trace = config_read_bool(config, section, "EnableDirtyBlockTrace", 0);
         dirtyblock_trace_path = config_read_string(config, section, "DirtyBlockTracePath", "./");
+
+        last_interval_table_size = config_read_int(config, section, "IntervalTableSize", 0);
 
 	/* Checks */
 	policy = str_map_string_case(&cache_policy_map, policy_str);
@@ -681,6 +684,9 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
               strcat(trace_complete_path, ".trace");
               mod->trace_ptr = fopen(trace_complete_path, "w");
            }
+
+           mod->last_interval_table_size = last_interval_table_size;
+           mod->last_interval_table = xcalloc(last_interval_table_size, sizeof(unsigned int));
         }
         else
         {
@@ -692,6 +698,11 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
 
            mod->epoch_interval_small = 0;
            mod->epoch_interval_large = 0;
+
+           mod->trace_ptr = NULL;
+
+           mod->last_interval_table_size = 0;
+           mod->last_interval_table = NULL;
         }
 
 	/* Fill in prefetcher parameters */

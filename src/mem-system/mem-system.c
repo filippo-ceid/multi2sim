@@ -1176,6 +1176,14 @@ void dramcache_report_dump(FILE * f)
    fprintf(f,"  Compress with 28 sets = %.5g\n\n",(double)dramcache_mod->dirty_peak_compressed_28/dramcache_mod->dirty_num_peak);
    fprintf(f, "DRAMCache Peak Dirty Lines After Compression 14 = %lld\n", dramcache_mod->dirty_num_peak_after_compression_14);
    fprintf(f, "DRAMCache Peak Dirty Lines After Compression 28 = %lld\n\n", dramcache_mod->dirty_num_peak_after_compression_28);
+
+   if (dramcache_mod->total_delta_cnt != 0) 
+   {
+      fprintf(f, "DRAMCache Average Delta (with Last Interval) = %.5g\n\n", 
+              dramcache_mod->total_delta_value/(double)dramcache_mod->total_delta_cnt);
+      fprintf(f, "  Total Delta Value = %lld\n", dramcache_mod->total_delta_value);
+      fprintf(f, "  Total Delta Cnt = %lld\n", dramcache_mod->total_delta_cnt);
+   }
    return;
 }
 
@@ -1346,6 +1354,51 @@ void dramcache_interval_buckets_printstats(FILE * f)
    return;
 }
 
+void dramcache_interval_profiling(int addr, long long interval)
+{
+   struct mod_t * dramcache_mod = mod_get_dramcache_mod();
+   unsigned int cache_block_num;
+   unsigned int table_entry;
+   int delta;
+
+   if (dramcache_mod==NULL) 
+   {
+      return;
+   }
+   if (dramcache_mod->last_interval_table == NULL) 
+   {
+      return;
+   }
+   if (dramcache_mod->last_interval_table_size == 0) 
+   {
+      return;
+   }
+
+   cache_block_num = addr;
+   cache_block_num = cache_block_num>>6;
+
+   table_entry = cache_block_num%dramcache_mod->last_interval_table_size;
+
+   if (dramcache_mod->last_interval_table[table_entry] != 0) 
+   {
+      delta = interval - dramcache_mod->last_interval_table[table_entry];
+      if (delta < 0) 
+      {
+         delta = -delta;
+      }
+
+      dramcache_mod->total_delta_value += delta;
+      dramcache_mod->total_delta_cnt++;
+
+   }
+
+   // update last interval table
+   dramcache_mod->last_interval_table[table_entry] = interval;
+
+
+   return;
+}
+
 void dram_free(void)
 {
    struct mod_t * dram_mod = mod_get_dram_mod();
@@ -1415,6 +1468,10 @@ void dram_free(void)
       if (dramcache_mod->trace_ptr) 
       {
          fclose(dramcache_mod->trace_ptr);
+      }
+      if (dramcache_mod->last_interval_table) 
+      {
+         free(dramcache_mod->last_interval_table);
       }
    }
 

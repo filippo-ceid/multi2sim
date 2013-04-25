@@ -1072,6 +1072,7 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 			}
 			else 
 			{
+			   // trace file output for miss info
                            if ( (mod->kind == mod_kind_cache) 
 				    && (mod->DRAM != NULL) )
 			   {
@@ -1265,6 +1266,8 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 			 interval = dramcache_virtualset_access_cnt(stack->addr)
 				 - mod->cache->sets[stack->set].blocks[stack->way].access_cnt;
 			 dramcache_interval_buckets_update(interval);
+
+			 dramcache_interval_profiling(stack->addr,interval);
 		      }
 		      else if (hitVictim) 
 		      {

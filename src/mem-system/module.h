@@ -219,6 +219,12 @@ struct mod_t
 
 	struct virtualset_t * dramcache_virtualsets;
 	
+	// interval profiling
+	unsigned int * last_interval_table;
+	unsigned int last_interval_table_size;
+	long long total_delta_value;
+	long long total_delta_cnt;
+		
 	/* MY Statistics */
 	long long doa_evictions;
 

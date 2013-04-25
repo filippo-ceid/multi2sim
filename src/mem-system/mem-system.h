@@ -82,6 +82,7 @@ void dramcache_virtualset_update(unsigned int addr);
 long long dramcache_virtualset_access_cnt(unsigned int addr);
 void dramcache_interval_buckets_update(long long interval);
 void dramcache_interval_buckets_printstats(FILE * f);
+void dramcache_interval_profiling(int addr, long long interval);
 
 void dram_free(void);
 void dramcache_epoch_finegrained(void);
@@ -89,6 +90,8 @@ void dramcache_epoch_coarsegrained(void);
 
 void dirtyblock_trace_update(int tag, int isinsertion);
 void fetch_benchmark_name(char * input, char * output);
+
+
 //============== END OF MY CODE ===============//
 #endif
 
