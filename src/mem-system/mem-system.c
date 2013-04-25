@@ -1388,7 +1388,7 @@ void dramcache_interval_profiling(int addr, long long interval)
    cache_access_block(dramcache_mod->last_interval_table, set, way);
 
 
-   if (dramcache_mod->last_interval_table->sets[set].blocks[way].access_cnt != 0) 
+   if (dramcache_mod->last_interval_table->sets[set].blocks[way].state != cache_block_invalid) 
    {
       delta = interval - dramcache_mod->last_interval_table->sets[set].blocks[way].access_cnt;
       if (delta < 0) 
