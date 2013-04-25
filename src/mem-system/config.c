@@ -704,8 +704,13 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
            }
 
            mod->last_interval_table_size = last_interval_table_size;
-           mod->last_interval_table = cache_create("last_interval_table", 
-                                       last_interval_table_size/16, 64, 16, cache_policy_lru);
+           if (last_interval_table_size > 0) 
+           {
+              mod->last_interval_table = cache_create("last_interval_table", 
+                                          last_interval_table_size/16, 64, 16, cache_policy_lru);
+           }
+           else
+              mod->last_interval_table = NULL;
            //xcalloc(last_interval_table_size, sizeof(unsigned int));
         }
         else
