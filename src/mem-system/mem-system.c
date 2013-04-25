@@ -1359,7 +1359,10 @@ void dramcache_interval_profiling(int addr, long long interval)
 {
    struct mod_t * dramcache_mod = mod_get_dramcache_mod();
    int delta;
-   int set,tag,offset,way;
+   int set;
+   int way;
+   int state;
+   int ret;
 
    if (dramcache_mod==NULL) 
    {
@@ -1374,22 +1377,10 @@ void dramcache_interval_profiling(int addr, long long interval)
       return;
    }
 
-   // decode address to get set/tag
-   cache_decode_address(dramcache_mod->last_interval_table, addr, &set, &tag, &offset);
-   // find out the way to insert
-   way = cache_replace_block(dramcache_mod->last_interval_table, set);
-   if (dramcache_mod->last_interval_table->sets[set].blocks[way].state != cache_block_invalid) 
+   ret = cache_find_block(dramcache_mod->last_interval_table, addr, &set, &way, &state);
+   if ( ret != 0 )
    {
-      dramcache_mod->last_interval_table_conflicts++;
-   }
-   // insert the block
-   cache_set_block(dramcache_mod->last_interval_table, set, way, tag, cache_block_modified);
-   // update the LRU info
-   cache_access_block(dramcache_mod->last_interval_table, set, way);
-
-
-   if (dramcache_mod->last_interval_table->sets[set].blocks[way].state != cache_block_invalid) 
-   {
+      // last interval exist
       delta = interval - dramcache_mod->last_interval_table->sets[set].blocks[way].access_cnt;
       if (delta < 0) 
       {
@@ -1399,10 +1390,27 @@ void dramcache_interval_profiling(int addr, long long interval)
       dramcache_mod->total_delta_value += delta;
       dramcache_mod->total_delta_cnt++;
 
-   }
+      // update last interval
+      dramcache_mod->last_interval_table->sets[set].blocks[way].access_cnt = interval;
 
-   // update last interval table
-   dramcache_mod->last_interval_table->sets[set].blocks[way].access_cnt = interval;
+      // update the LRU info
+      cache_access_block(dramcache_mod->last_interval_table, set, way);
+   }
+   else
+   {
+      // set up new record
+      way = cache_replace_block(dramcache_mod->last_interval_table, set);
+      if (dramcache_mod->last_interval_table->sets[set].blocks[way].state != cache_block_invalid) 
+      {
+         dramcache_mod->last_interval_table_conflicts++;
+      }
+      dramcache_mod->last_interval_table->sets[set].blocks[way].state = cache_block_modified;
+      dramcache_mod->last_interval_table->sets[set].blocks[way].tag = addr;
+      // update the LRU info
+      cache_access_block(dramcache_mod->last_interval_table, set, way);
+      // update last interval
+      dramcache_mod->last_interval_table->sets[set].blocks[way].access_cnt = interval;
+   }
 
    return;
 }
