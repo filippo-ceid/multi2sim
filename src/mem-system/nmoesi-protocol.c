@@ -148,6 +148,10 @@ void mod_handler_nmoesi_load(int event, void *data)
 		if (master_stack)
 		{
 			mod->reads++;
+			mod->non_blocking_reads++;
+			mod->accesses++;
+			mod->no_retry_accesses++;
+
 			mod_coalesce(mod, master_stack, stack);
 			mod_stack_wait_in_stack(stack, master_stack, EV_MOD_NMOESI_LOAD_FINISH);
 			return;
@@ -191,7 +195,7 @@ void mod_handler_nmoesi_load(int event, void *data)
 		/* Call find and lock */
 		new_stack = mod_stack_create(stack->id, mod, stack->addr,
 			EV_MOD_NMOESI_LOAD_ACTION, stack);
-		new_stack->blocking = 1;
+		new_stack->blocking = 0;
 		new_stack->read = 1;
 		new_stack->retry = stack->retry;
 		esim_schedule_event(EV_MOD_NMOESI_FIND_AND_LOCK, new_stack, 0);
@@ -1275,7 +1279,7 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 		      long long interval;
 
 		      dramcache_virtualset_update(stack->addr);
-
+		      //dramcache_interval_profiling(stack->addr, 50);
 		      if (stack->hit) 
 		      {
 			 interval = dramcache_virtualset_access_cnt(stack->addr)
