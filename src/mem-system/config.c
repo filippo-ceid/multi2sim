@@ -551,7 +551,7 @@ static struct mod_t *mem_config_read_cache(struct config_t *config, char *sectio
         system_ini_name = config_read_string(config,section,"SystemINI","system.ini");
         dram_size = config_read_int(config, section, "DRAMSize", 256);
         CPUClkFreq = config_read_llint(config,section,"CPUClock", 2000000000);
-        victim_size = config_read_int(config, section, "VictimSize", 0);
+        victim_size = config_read_int(config, section, "VictimSize", 16);
         victim_assoc = config_read_int(config, section, "VictimAssoc", 32);
         dramcache_miss_policy = config_read_string(config, section, "MissPolicy", "none");
         logFileSuffix = config_read_string(config, section, "LogSuffix", "-cache");

@@ -1766,7 +1766,7 @@ void dramcache_epoch_coarsegrained(void)
    dramcache_update_prior_stat(dramcache_mod);
 }
 
-void dramcache_trace_update(int tag, int isread)
+void dramcache_trace_update(int tag, int isread, int core_id)
 {
    struct mod_t * dramcache_mod = mod_get_dramcache_mod();
 
@@ -1786,7 +1786,7 @@ void dramcache_trace_update(int tag, int isread)
    {
       fprintf(dramcache_mod->dramcache_trace_ptr, "%2d ", 1);
    }
-   
+   fprintf(dramcache_mod->dramcache_trace_ptr, "%3d ", core_id);
    fprintf(dramcache_mod->dramcache_trace_ptr, "%d\n", tag);
 }
 

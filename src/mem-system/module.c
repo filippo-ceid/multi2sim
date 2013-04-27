@@ -122,10 +122,13 @@ long long mod_access(struct mod_t *mod, enum mod_access_kind_t access_kind,
 		mod, addr, ESIM_EV_NONE, NULL);
 
 	/* Initialize */
-	stack->witness_ptr = witness_ptr;
+	stack->witness_ptr = NULL;//witness_ptr;
 	stack->event_queue = event_queue;
 	stack->event_queue_item = event_queue_item;
 	stack->client_info = client_info;
+
+        stack->core_id = (int)witness_ptr;    //==== MY CODE ====//
+
 
 	/* Select initial CPU/GPU event */
 	if (mod->kind == mod_kind_cache || mod->kind == mod_kind_main_memory

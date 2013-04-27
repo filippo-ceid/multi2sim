@@ -102,6 +102,7 @@ struct mod_stack_t
 	unsigned char victimHasHit; 	//==== MY CODE ====//
 	unsigned char isEvict; 		//==== MY CODE ====//
 	unsigned char isWriteback; 	//==== MY CODE ====//
+	int core_id; 			//==== MY CODE ====//
 
 	int hit : 1;
 	int err : 1;

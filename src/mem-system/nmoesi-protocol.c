@@ -1003,8 +1003,8 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 
 	if (event == EV_MOD_NMOESI_FIND_AND_LOCK)
 	{
-		mem_debug("  %lld %lld 0x%x %s find and lock (blocking=%d)\n",
-			esim_cycle, stack->id, stack->addr, mod->name, stack->blocking);
+		mem_debug("  %lld %lld 0x%x %s find and lock (blocking=%d)(thread=%d)\n",
+			esim_cycle, stack->id, stack->addr, mod->name, stack->blocking, stack->core_id);
 		mem_trace("mem.access name=\"A-%lld\" state=\"%s:find_and_lock\"\n",
 			stack->id, mod->name);
 
@@ -1064,11 +1064,11 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 			      {
                                  if (stack->read) 
 				 {
-				    dramcache_trace_update(stack->tag, 0);
+				    dramcache_trace_update(stack->tag, 0, stack->core_id);
                                  }
 				 else
 				 {
-				    dramcache_trace_update(stack->tag, 1);
+				    dramcache_trace_update(stack->tag, 1, stack->core_id);
 				 }
 			      }
                            }

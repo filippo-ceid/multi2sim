@@ -64,9 +64,16 @@ static int x86_cpu_issue_sq(int core, int thread, int quant)
 		client_info = mod_client_info_create(X86_THREAD.data_mod);
 		client_info->prefetcher_eip = store->eip;
 
-		/* Issue store */
+                //======= MY CODE ========//
+                /* Issue store */
+                // Here making use of unused pointer parameter to pass core# 
 		mod_access(X86_THREAD.data_mod, mod_access_store,
-		       store->phy_addr, NULL, X86_CORE.event_queue, store, client_info);
+		       store->phy_addr, (int*) core, X86_CORE.event_queue, store, client_info);
+
+                //======== END ===========//
+		/* Issue store */
+		//mod_access(X86_THREAD.data_mod, mod_access_store,
+		//       store->phy_addr, NULL, X86_CORE.event_queue, store, client_info);
 
 		/* The cache system will place the store at the head of the
 		 * event queue when it is ready. For now, mark "in_event_queue" to
@@ -133,9 +140,15 @@ static int x86_cpu_issue_lq(int core, int thread, int quant)
 		client_info = mod_client_info_create(X86_THREAD.data_mod);
 		client_info->prefetcher_eip = load->eip;
 
+                //======= MY CODE ========//
+                /* Issue store */
+                // Here making use of unused pointer parameter to pass core# 
 		/* Access memory system */
-		mod_access(X86_THREAD.data_mod, mod_access_load,
-			load->phy_addr, NULL, X86_CORE.event_queue, load, client_info);
+                mod_access(X86_THREAD.data_mod, mod_access_load,
+			load->phy_addr, (int*) core, X86_CORE.event_queue, load, client_info);
+
+		//mod_access(X86_THREAD.data_mod, mod_access_load,
+		//	load->phy_addr, NULL, X86_CORE.event_queue, load, client_info);
 
 		/* The cache system will place the load at the head of the
 		 * event queue when it is ready. For now, mark "in_event_queue" to
@@ -218,9 +231,14 @@ static int x86_cpu_issue_preq(int core, int thread, int quant)
 		assert(prefetch->uinst->opcode == x86_uinst_prefetch);
 		x86_preq_remove(core, thread);
 
+                //======= MY CODE ========//
+                /* Issue store */
+                // Here making use of unused pointer parameter to pass core# 
+                mod_access(X86_THREAD.data_mod, mod_access_prefetch,
+			prefetch->phy_addr, (int*) core, X86_CORE.event_queue, prefetch, NULL);
 		/* Access memory system */
-		mod_access(X86_THREAD.data_mod, mod_access_prefetch,
-			prefetch->phy_addr, NULL, X86_CORE.event_queue, prefetch, NULL);
+		//mod_access(X86_THREAD.data_mod, mod_access_prefetch,
+		//	prefetch->phy_addr, NULL, X86_CORE.event_queue, prefetch, NULL);
 
 		/* Record prefetched address */
 		prefetch_history_record(X86_CORE.prefetch_history, prefetch->phy_addr);
