@@ -25,6 +25,7 @@
 #include <lib/util/misc.h>
 #include <lib/util/string.h>
 #include <lib/util/repos.h>
+#include <arch/x86/timing/uop.h>
 
 #include "cache.h"
 #include "directory.h"
@@ -122,13 +123,23 @@ long long mod_access(struct mod_t *mod, enum mod_access_kind_t access_kind,
 		mod, addr, ESIM_EV_NONE, NULL);
 
 	/* Initialize */
-	stack->witness_ptr = NULL;//witness_ptr;
+	stack->witness_ptr = witness_ptr;
 	stack->event_queue = event_queue;
 	stack->event_queue_item = event_queue_item;
 	stack->client_info = client_info;
 
-        stack->core_id = (int)witness_ptr;    //==== MY CODE ====//
-
+        if (event_queue_item) 
+        {
+           stack->core_id = ((struct x86_uop_t *)event_queue_item)->core;     //==== MY CODE ====//
+           stack->eip = ((struct x86_uop_t *)event_queue_item)->eip;          //==== MY CODE ====//
+           stack->phy_addr = ((struct x86_uop_t *)event_queue_item)->phy_addr;//==== MY CODE ====//
+        }
+        else
+        {
+           stack->core_id = -1;
+           stack->eip = 0;
+           stack->phy_addr = 0;
+        }
 
 	/* Select initial CPU/GPU event */
 	if (mod->kind == mod_kind_cache || mod->kind == mod_kind_main_memory

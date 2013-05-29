@@ -46,10 +46,16 @@ struct mod_stack_t *mod_stack_create(long long id, struct mod_t *mod,
 	if (ret_stack != NULL)
         {
 		stack->client_info = ret_stack->client_info;
-                stack->core_id = ret_stack->core_id; //===== MY CODE =====//
+                stack->core_id = ret_stack->core_id;     //===== MY CODE =====//
+                stack->eip = ret_stack->eip;             //===== MY CODE =====//
+                stack->phy_addr = ret_stack->phy_addr;   //===== MY CODE =====//
         }
         else
+        {
            stack->core_id = -1;
+           stack->eip = 0;
+           stack->phy_addr = 0;
+        }
 
 	stack->way = -1;
 	stack->set = -1;

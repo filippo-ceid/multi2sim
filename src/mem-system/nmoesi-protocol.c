@@ -1062,14 +1062,8 @@ void mod_handler_nmoesi_find_and_lock(int event, void *data)
 			   {
 			      if (mod->enable_dramcache_trace) 
 			      {
-                                 if (stack->read) 
-				 {
-				    dramcache_trace_update(stack->tag, 0, stack->core_id);
-                                 }
-				 else
-				 {
-				    dramcache_trace_update(stack->tag, 1, stack->core_id);
-				 }
+				 dramcache_trace_update(stack);
+                                 
 			      }
                            }
                    }

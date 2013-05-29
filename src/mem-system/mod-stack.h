@@ -103,6 +103,8 @@ struct mod_stack_t
 	unsigned char isEvict; 		//==== MY CODE ====//
 	unsigned char isWriteback; 	//==== MY CODE ====//
 	int core_id; 			//==== MY CODE ====//
+	unsigned int eip;		//==== MY CODE ====//
+	unsigned int phy_addr;		//==== MY CODE ====//
 
 	int hit : 1;
 	int err : 1;

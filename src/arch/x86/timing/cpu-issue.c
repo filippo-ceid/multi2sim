@@ -68,7 +68,7 @@ static int x86_cpu_issue_sq(int core, int thread, int quant)
                 /* Issue store */
                 // Here making use of unused pointer parameter to pass core# 
 		mod_access(X86_THREAD.data_mod, mod_access_store,
-		       store->phy_addr, (int*) core, X86_CORE.event_queue, store, client_info);
+		       store->phy_addr, NULL, X86_CORE.event_queue, store, client_info);
 
                 //======== END ===========//
 		/* Issue store */
@@ -145,7 +145,7 @@ static int x86_cpu_issue_lq(int core, int thread, int quant)
                 // Here making use of unused pointer parameter to pass core# 
 		/* Access memory system */
                 mod_access(X86_THREAD.data_mod, mod_access_load,
-			load->phy_addr, (int*) core, X86_CORE.event_queue, load, client_info);
+			load->phy_addr, NULL, X86_CORE.event_queue, load, client_info);
 
 		//mod_access(X86_THREAD.data_mod, mod_access_load,
 		//	load->phy_addr, NULL, X86_CORE.event_queue, load, client_info);
@@ -235,7 +235,7 @@ static int x86_cpu_issue_preq(int core, int thread, int quant)
                 /* Issue store */
                 // Here making use of unused pointer parameter to pass core# 
                 mod_access(X86_THREAD.data_mod, mod_access_prefetch,
-			prefetch->phy_addr, (int*) core, X86_CORE.event_queue, prefetch, NULL);
+			prefetch->phy_addr, NULL, X86_CORE.event_queue, prefetch, NULL);
 		/* Access memory system */
 		//mod_access(X86_THREAD.data_mod, mod_access_prefetch,
 		//	prefetch->phy_addr, NULL, X86_CORE.event_queue, prefetch, NULL);

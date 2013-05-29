@@ -1766,7 +1766,7 @@ void dramcache_epoch_coarsegrained(void)
    dramcache_update_prior_stat(dramcache_mod);
 }
 
-void dramcache_trace_update(int tag, int isread, int core_id)
+void dramcache_trace_update(struct mod_stack_t * stack)
 {
    struct mod_t * dramcache_mod = mod_get_dramcache_mod();
 
@@ -1778,16 +1778,17 @@ void dramcache_trace_update(int tag, int isread, int core_id)
    {
       return;
    }
-   if (isread == 0) // read
+   if (stack->read) // read
    {
       fprintf(dramcache_mod->dramcache_trace_ptr, "%2d ", 0);
    }
-   else if (isread == 1) // write
+   else // write
    {
       fprintf(dramcache_mod->dramcache_trace_ptr, "%2d ", 1);
    }
-   fprintf(dramcache_mod->dramcache_trace_ptr, "%3d ", core_id);
-   fprintf(dramcache_mod->dramcache_trace_ptr, "%d\n", tag);
+   fprintf(dramcache_mod->dramcache_trace_ptr, "%3d ", stack->core_id);
+   fprintf(dramcache_mod->dramcache_trace_ptr, "%10u ", stack->phy_addr);
+   fprintf(dramcache_mod->dramcache_trace_ptr, "%u\n", stack->eip);
 }
 
 void dirtyblock_trace_update(int tag, int isinsertion)
