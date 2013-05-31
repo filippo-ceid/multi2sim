@@ -54,7 +54,7 @@ struct mod_stack_t *mod_stack_create(long long id, struct mod_t *mod,
         {
            stack->core_id = -1;
            stack->eip = 0;
-           stack->phy_addr = 0;
+           stack->phy_addr = addr;
         }
 
 	stack->way = -1;

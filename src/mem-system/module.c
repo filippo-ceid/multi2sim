@@ -138,7 +138,7 @@ long long mod_access(struct mod_t *mod, enum mod_access_kind_t access_kind,
         {
            stack->core_id = -1;
            stack->eip = 0;
-           stack->phy_addr = 0;
+           stack->phy_addr = addr;
         }
 
 	/* Select initial CPU/GPU event */
